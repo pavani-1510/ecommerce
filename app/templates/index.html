@@ -110,11 +110,18 @@
                 (data.categories || []).forEach(category => {
                     const card = document.createElement('div');
                     card.className = 'category-card';
+                    const categoryImage = category.image_url || '';
+                    const fallbackLabel = (category.name || 'Category').split(' ').slice(0, 2).join(' ');
                     card.innerHTML = `
-                        <a href="/products?category_id=${category.id}">
-                            <div class="category-image">${category.icon || '📦'}</div>
-                            <h3>${category.name}</h3>
-                            <p>${category.description || 'Explore this collection'}</p>
+                        <a href="/categories" class="category-card-link">
+                            <div class="category-image ${categoryImage ? 'has-image' : 'no-image'}" 
+                                 ${categoryImage ? `style="background-image:url('${categoryImage}'); background-size:cover; background-position:center;"` : ''}>
+                                ${categoryImage ? '' : `<span>${fallbackLabel}</span>`}
+                            </div>
+                            <div class="category-card-body">
+                                <h3>${category.name}</h3>
+                                <p>${category.description || 'Explore this collection'}</p>
+                            </div>
                         </a>
                     `;
                     grid.appendChild(card);

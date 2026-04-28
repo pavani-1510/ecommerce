@@ -91,6 +91,11 @@ def create_app(config_name=None):
         """Products listing page"""
         return render_template('products.html')
 
+    @app.route('/categories', methods=['GET'])
+    def categories_page():
+        """Categories showcase page"""
+        return render_template('categories.html')
+
     @app.route('/products/<product_id>', methods=['GET'])
     def product_detail_page(product_id):
         """Product detail page"""

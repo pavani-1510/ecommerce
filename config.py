@@ -1,36 +1,19 @@
+"""
+Flask Configuration
+Separate module to avoid circular imports
+"""
 import os
 from datetime import timedelta
-from pathlib import Path
 
 
 def _as_bool(value, default=False):
+    """Convert environment variable to boolean."""
     if value is None:
         return default
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
 
-
-def _load_env_file(filename: str) -> None:
-    """Load simple KEY=VALUE pairs from a local env file if present."""
-    env_path = Path(__file__).resolve().parent / filename
-    if not env_path.exists():
-        return
-
-    for raw_line in env_path.read_text().splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith('#') or '=' not in line:
-            continue
-
-        key, value = line.split('=', 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
-_load_env_file('.env.local')
-_load_env_file('.env')
 
 class Config:
     """Base configuration"""
@@ -85,7 +68,7 @@ class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
     TESTING = False
-    
+
 
 def get_config(env=None):
     """Get configuration based on environment"""
@@ -97,5 +80,4 @@ def get_config(env=None):
         'testing': TestingConfig,
         'production': ProductionConfig,
     }
-    
     return config_map.get(env, DevelopmentConfig)

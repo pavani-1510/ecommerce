@@ -121,7 +121,7 @@ class _SafeSupabaseClient:
 SYSTEM_SITE_SETTINGS = {
     'id': 'default',
     'shop_name': 'Mantra Made 3D Arts',
-    'logo_image_url': '',
+    'logo_image_url': '/static/uploads/logo.jpg',
     'brand_tag': 'spiritual decor from kuppam',
     'hero_title': 'Divine Spiritual Creations Crafted With Devotion',
     'hero_subtitle': 'Shop spiritual idols, puja decor, and sacred gifting pieces from Mantra Made 3D Arts, proudly based in Kuppam.',

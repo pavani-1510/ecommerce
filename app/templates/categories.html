@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - Mantra Made 3D Arts{% endblock %}
+
+{% block content %}
+<section class="page-hero compact">
+    <p class="eyebrow">Shop</p>
+    <h1>All Categories</h1>
+    <p>Browse our collections and find what you're looking for.</p>
+</section>
+
+<div class="categories-showcase">
+    <div class="categories-grid" id="allCategoriesGrid">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadAllCategories() {
+        try {
+            const response = await fetch('/api/products/categories');
+            const data = await response.json();
+            const grid = document.getElementById('allCategoriesGrid');
+            grid.innerHTML = '';
+            
+            (data.categories || []).forEach(category => {
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                const categoryImage = category.image_url || '';
+                const fallbackLabel = (category.name || 'Category').split(' ').slice(0, 2).join(' ');
+                
+                card.innerHTML = `
+                    <a href="/products?category_id=${category.id}" class="category-card-link">
+                        <div class="category-image ${categoryImage ? 'has-image' : 'no-image'}" 
+                             ${categoryImage ? `style="background-image:url('${categoryImage}'); background-size:cover; background-position:center;"` : ''}>
+                            ${categoryImage ? '' : `<span>${fallbackLabel}</span>`}
+                        </div>
+                        <div class="category-card-body">
+                            <h3>${category.name}</h3>
+                            <p>${category.description || 'Explore this collection'}</p>
+                        </div>
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (error) {
+            console.error('Error loading categories:', error);
+            document.getElementById('allCategoriesGrid').innerHTML = '<p style="grid-column: 1/-1;">Failed to load categories.</p>';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAllCategories);
+</script>
+{% endblock %}
