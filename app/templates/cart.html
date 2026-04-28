@@ -1,0 +1,583 @@
+{% extends "base.html" %}
+
+{% block title %}Cart - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cart-layout {
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: 1rem;
+    }
+
+    .cart-card,
+    .checkout-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        padding: 1rem;
+    }
+
+    .cart-item {
+        display: grid;
+        grid-template-columns: 84px 1fr auto;
+        gap: 0.85rem;
+        align-items: center;
+        border: 1px solid #eadccb;
+        border-radius: 12px;
+        padding: 0.7rem;
+        margin-bottom: 0.7rem;
+        background: #fffaf4;
+    }
+
+    .cart-thumb {
+        width: 84px;
+        height: 84px;
+        border-radius: 10px;
+        background: #e9d7c1 center/cover no-repeat;
+    }
+
+    .cart-item h3 {
+        margin-bottom: 0.2rem;
+    }
+
+    .cart-meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+    }
+
+    .qty-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.45rem;
+    }
+
+    .qty-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid #d8c8b5;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .price-block {
+        text-align: right;
+        display: grid;
+        gap: 0.45rem;
+        justify-items: end;
+    }
+
+    .price-block strong {
+        font-size: 1.05rem;
+    }
+
+    .buy-btn,
+    .remove-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 0.86rem;
+    }
+
+    .buy-btn {
+        color: var(--accent);
+        font-weight: 700;
+    }
+
+    .remove-btn {
+        color: #a33a2b;
+    }
+
+    .summary-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.45rem;
+        color: var(--muted);
+    }
+
+    .summary-line.total {
+        color: var(--text-color);
+        font-weight: 700;
+        font-size: 1.05rem;
+        border-top: 1px solid #eadccb;
+        padding-top: 0.55rem;
+        margin-top: 0.6rem;
+    }
+
+    .checkout-actions {
+        display: grid;
+        gap: 0.6rem;
+        margin-top: 0.9rem;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(24, 19, 15, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 130;
+        padding: 16px;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-card {
+        width: min(760px, 100%);
+        max-height: calc(100vh - 32px);
+        overflow: auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 20px 44px rgba(21, 16, 12, 0.3);
+        padding: 1rem;
+    }
+
+    .modal-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+    }
+
+    .modal-close {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid #d8c8b5;
+        background: #fff;
+        cursor: pointer;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+    }
+
+    .field {
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .field.full {
+        grid-column: 1 / -1;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        border: 1px solid #d8c8b5;
+        border-radius: 10px;
+        padding: 0.62rem 0.7rem;
+        background: #fffefb;
+        font: inherit;
+    }
+
+    .pay-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .qr-panel {
+        margin-top: 0.8rem;
+        border: 1px solid #eadccb;
+        border-radius: 12px;
+        padding: 0.8rem;
+        background: #fffaf4;
+        text-align: center;
+    }
+
+    .qr-panel img {
+        width: 220px;
+        max-width: 100%;
+        border-radius: 10px;
+        background: #fff;
+        padding: 8px;
+        border: 1px solid #eadccb;
+    }
+
+    @media (max-width: 900px) {
+        .cart-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cart-item {
+            grid-template-columns: 72px 1fr;
+        }
+
+        .price-block {
+            grid-column: 1 / -1;
+            justify-items: start;
+            text-align: left;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-hero compact">
+    <p class="eyebrow">Your Cart</p>
+    <h1>Selected Pieces</h1>
+    <p>Review what you’ve added before checkout.</p>
+</section>
+
+<div class="cart-layout">
+    <div class="cart-card">
+        <h2>Items in Cart</h2>
+        <div id="cartItems" class="stack-list"></div>
+    </div>
+
+    <aside class="checkout-card">
+        <h2>Checkout</h2>
+        <div class="summary-line"><span>Items</span><span id="summaryItems">0</span></div>
+        <div class="summary-line"><span>Subtotal</span><span id="summarySubtotal">₹0</span></div>
+        <div class="summary-line total"><span>Total</span><span id="summaryTotal">₹0</span></div>
+        <p class="cart-note">Free delivery on eligible orders and quick checkout for signed-in users.</p>
+
+        <div class="checkout-actions">
+            <button id="buyAllBtn" class="btn btn-primary">Buy All Items</button>
+            <a href="/products" class="btn btn-secondary">Continue Shopping</a>
+        </div>
+    </aside>
+</div>
+
+<div id="checkoutModal" class="modal-overlay" aria-hidden="true">
+    <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="checkoutModalTitle">
+        <div class="modal-head">
+            <h2 id="checkoutModalTitle">Checkout</h2>
+            <button type="button" class="modal-close" id="closeCheckoutModalBtn" aria-label="Close">X</button>
+        </div>
+
+        <div class="field full">
+            <label for="savedAddressSelect">Address Selection</label>
+            <select id="savedAddressSelect"></select>
+        </div>
+
+        <form id="checkoutForm" class="form-grid">
+            <div class="field full">
+                <label for="addressFullName">Full Name</label>
+                <input id="addressFullName" type="text" required>
+            </div>
+            <div class="field full">
+                <label for="addressLine">Address</label>
+                <textarea id="addressLine" rows="2" required></textarea>
+            </div>
+            <div class="field">
+                <label for="addressCity">City</label>
+                <input id="addressCity" type="text" required>
+            </div>
+            <div class="field">
+                <label for="addressState">State</label>
+                <input id="addressState" type="text" required>
+            </div>
+            <div class="field">
+                <label for="addressPostalCode">Postal Code</label>
+                <input id="addressPostalCode" type="text" required>
+            </div>
+            <div class="field">
+                <label for="addressPhone">Phone</label>
+                <input id="addressPhone" type="text">
+            </div>
+
+            <div class="field full">
+                <label>Payment Method</label>
+                <div class="pay-row">
+                    <label><input type="radio" name="paymentMethod" value="cod" checked> Cash on Delivery</label>
+                    <label><input type="radio" name="paymentMethod" value="qr"> QR Code</label>
+                </div>
+            </div>
+
+            <div class="field full" style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                <button type="submit" class="btn btn-primary" id="placeOrderBtn">Place Order</button>
+                <button type="button" class="btn btn-secondary" id="saveAddressBtn">Save Address</button>
+            </div>
+        </form>
+
+        <div id="checkoutStatus" style="margin-top:0.7rem;"></div>
+
+        <div id="qrPanel" class="qr-panel" style="display:none;">
+            <h3>Scan to Pay</h3>
+            <img id="qrImage" alt="Payment QR code">
+            <p id="qrOrderInfo"></p>
+            <div class="field full" style="margin-top:0.5rem; text-align:left;">
+                <label for="qrTransactionId">Transaction ID (after payment)</label>
+                <input id="qrTransactionId" type="text" placeholder="Enter UPI transaction id">
+            </div>
+            <button id="verifyQrPaymentBtn" class="btn btn-primary" style="margin-top:0.45rem;">Verify Payment</button>
+        </div>
+    </article>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const cartState = {
+    items: [],
+    savedAddresses: []
+};
+
+function openCheckoutModal() {
+    document.getElementById('checkoutStatus').innerHTML = '';
+    document.getElementById('qrPanel').style.display = 'none';
+    document.getElementById('checkoutModal').classList.add('show');
+    document.getElementById('checkoutModal').setAttribute('aria-hidden', 'false');
+}
+
+function closeCheckoutModal() {
+    document.getElementById('checkoutModal').classList.remove('show');
+    document.getElementById('checkoutModal').setAttribute('aria-hidden', 'true');
+}
+
+function getPaymentMethod() {
+    const selected = document.querySelector('input[name="paymentMethod"]:checked');
+    return selected ? selected.value : 'cod';
+}
+
+function readAddressForm() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return {
+        full_name: document.getElementById('addressFullName').value.trim(),
+        address_line: document.getElementById('addressLine').value.trim(),
+        city: document.getElementById('addressCity').value.trim(),
+        state: document.getElementById('addressState').value.trim(),
+        postal_code: document.getElementById('addressPostalCode').value.trim(),
+        phone: document.getElementById('addressPhone').value.trim(),
+        email: user.email || '',
+        country: 'India'
+    };
+}
+
+function populateAddressForm(address) {
+    if (!address) return;
+    document.getElementById('addressFullName').value = address.full_name || '';
+    document.getElementById('addressLine').value = address.address_line || '';
+    document.getElementById('addressCity').value = address.city || '';
+    document.getElementById('addressState').value = address.state || '';
+    document.getElementById('addressPostalCode').value = address.postal_code || '';
+    document.getElementById('addressPhone').value = address.phone || '';
+}
+
+function loadSavedAddresses() {
+    cartState.savedAddresses = JSON.parse(localStorage.getItem('saved_addresses') || '[]');
+    const select = document.getElementById('savedAddressSelect');
+    if (!cartState.savedAddresses.length) {
+        select.innerHTML = '<option value="">No saved addresses</option>';
+        return;
+    }
+
+    select.innerHTML = cartState.savedAddresses
+        .map((address, idx) => `<option value="${idx}">${address.full_name} - ${address.city}</option>`)
+        .join('');
+
+    populateAddressForm(cartState.savedAddresses[0]);
+}
+
+function saveCurrentAddress() {
+    const address = readAddressForm();
+    if (!address.full_name || !address.address_line || !address.city || !address.state || !address.postal_code) {
+        showNotification('Fill all address fields before saving', 'error');
+        return;
+    }
+
+    const saved = JSON.parse(localStorage.getItem('saved_addresses') || '[]');
+    saved.unshift(address);
+    localStorage.setItem('saved_addresses', JSON.stringify(saved.slice(0, 5)));
+    loadSavedAddresses();
+    showNotification('Address saved', 'success');
+}
+
+function getItemPrice(item) {
+    return Number(item.discount_price || item.price || item.products?.price || 0);
+}
+
+function formatItemTotal(item) {
+    return getItemPrice(item) * Number(item.quantity || 1);
+}
+
+function renderCartItems(items) {
+    const container = document.getElementById('cartItems');
+    if (!items.length) {
+        container.innerHTML = '<div class="empty-state"><h3>Your cart is empty</h3><p>Add a product and it will move you straight to checkout.</p><a href="/products" class="btn btn-primary">Browse Products</a></div>';
+        return;
+    }
+
+    container.innerHTML = items.map(item => {
+        const product = item.products || {};
+        const image = Array.isArray(product.images) && product.images.length ? product.images[0] : 'https://via.placeholder.com/220x220?text=Mantra+Made+3D+Arts';
+        return `
+            <div class="cart-item">
+                <div>
+                    <div class="cart-thumb" style="background-image:url('${image}')"></div>
+                </div>
+                <div>
+                    <h3>${product.name || 'Item'}</h3>
+                    <p class="cart-meta">${product.description || ''}</p>
+                    <div class="qty-row">
+                        <button class="qty-btn" data-dec="${item.product_id}">-</button>
+                        <span>Qty: ${item.quantity}</span>
+                        <button class="qty-btn" data-inc="${item.product_id}">+</button>
+                    </div>
+                </div>
+                <div class="price-block">
+                    <strong>${formatPrice(formatItemTotal(item))}</strong>
+                    <button class="buy-btn" data-buy="${item.product_id}">Go to Checkout</button>
+                    <button class="remove-btn" data-remove="${item.product_id}">Remove</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('[data-inc]').forEach(button => {
+        button.addEventListener('click', () => {
+            const item = cartState.items.find(entry => String(entry.product_id) === String(button.dataset.inc));
+            if (!item) return;
+            updateCartItem(item.product_id, Number(item.quantity || 0) + 1);
+        });
+    });
+
+    container.querySelectorAll('[data-dec]').forEach(button => {
+        button.addEventListener('click', () => {
+            const item = cartState.items.find(entry => String(entry.product_id) === String(button.dataset.dec));
+            if (!item) return;
+            const nextQuantity = Number(item.quantity || 0) - 1;
+            if (nextQuantity < 1) {
+                removeCartItem(item.product_id);
+                return;
+            }
+            updateCartItem(item.product_id, nextQuantity);
+        });
+    });
+
+    container.querySelectorAll('[data-remove]').forEach(button => {
+        button.addEventListener('click', () => removeCartItem(button.dataset.remove));
+    });
+
+    container.querySelectorAll('[data-buy]').forEach(button => {
+        button.addEventListener('click', () => {
+            openCheckoutModal();
+        });
+    });
+}
+
+function updateSummary(items) {
+    const subtotal = items.reduce((sum, item) => sum + formatItemTotal(item), 0);
+    document.getElementById('summaryItems').textContent = String(items.length);
+    document.getElementById('summarySubtotal').textContent = formatPrice(subtotal);
+    document.getElementById('summaryTotal').textContent = formatPrice(subtotal);
+}
+
+async function loadCart() {
+    const response = await apiRequest('/cart');
+    if (!response) return;
+
+    const data = await response.json();
+    cartState.items = data.items || [];
+    renderCartItems(cartState.items);
+    updateSummary(cartState.items);
+}
+
+async function updateCartItem(productId, quantity) {
+    const response = await apiRequest(`/cart/${productId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ quantity })
+    });
+
+    if (!response) return;
+    const data = await response.json();
+    if (!response.ok) {
+        showNotification(data.error || 'Failed to update cart', 'error');
+        return;
+    }
+
+    await loadCart();
+    updateCartButtonStates();
+}
+
+async function removeCartItem(productId) {
+    const response = await apiRequest(`/cart/${productId}`, { method: 'DELETE' });
+    if (!response) return;
+
+    const data = await response.json();
+    if (!response.ok) {
+        showNotification(data.error || 'Failed to remove item', 'error');
+        return;
+    }
+
+    showNotification('Removed from cart', 'success');
+    await loadCart();
+    updateCartButtonStates();
+}
+
+async function submitCheckout(event) {
+    event.preventDefault();
+
+    const address = readAddressForm();
+    if (!address.full_name || !address.address_line || !address.city || !address.state || !address.postal_code) {
+        document.getElementById('checkoutStatus').innerHTML = '<div class="alert alert-error">Please complete the address details.</div>';
+        return;
+    }
+
+    const response = await apiRequest('/orders', {
+        method: 'POST',
+        body: JSON.stringify({
+            shipping_address: address,
+            billing_address: address,
+            payment_method: getPaymentMethod(),
+            notes: ''
+        })
+    });
+
+    if (!response) return;
+
+    const data = await response.json();
+    if (!response.ok) {
+        document.getElementById('checkoutStatus').innerHTML = `<div class="alert alert-error">${data.error || 'Checkout failed'}</div>`;
+        return;
+    }
+
+    document.getElementById('checkoutStatus').innerHTML = '<div class="alert alert-success">Order placed successfully.</div>';
+    closeCheckoutModal();
+    await loadCart();
+    updateCartButtonStates();
+}
+
+document.getElementById('buyAllBtn').addEventListener('click', () => {
+    if (!cartState.items.length) {
+        showNotification('Your cart is empty', 'error');
+        return;
+    }
+    openCheckoutModal();
+});
+
+document.getElementById('closeCheckoutModalBtn').addEventListener('click', closeCheckoutModal);
+document.getElementById('checkoutModal').addEventListener('click', event => {
+    if (event.target.id === 'checkoutModal') closeCheckoutModal();
+});
+document.getElementById('savedAddressSelect').addEventListener('change', event => {
+    const idx = Number(event.target.value || -1);
+    if (idx >= 0 && cartState.savedAddresses[idx]) {
+        populateAddressForm(cartState.savedAddresses[idx]);
+    }
+});
+document.getElementById('saveAddressBtn').addEventListener('click', saveCurrentAddress);
+document.getElementById('checkoutForm').addEventListener('submit', submitCheckout);
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSavedAddresses();
+    loadCart();
+});
+</script>
+{% endblock %}

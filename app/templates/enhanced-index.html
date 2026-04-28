@@ -1,0 +1,475 @@
+{% extends "enhanced-base.html" %}
+
+{% block title %}Home - Mantra Made 3D Arts | Premium 3D Printing Solutions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-eyebrow {
+        color: var(--brand);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        font-weight: 600;
+        margin-bottom: 12px;
+        animation: slideInUp 0.6s ease-out;
+    }
+    
+    .services-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+        margin: 3rem 0;
+    }
+    
+    .service-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        transition: var(--transition);
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .service-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-lg);
+        background: linear-gradient(135deg, rgba(179, 79, 50, 0.05) 0%, rgba(31, 110, 100, 0.05) 100%);
+    }
+    
+    .service-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+    
+    .service-card h3 {
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+    
+    .service-card p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+    }
+    
+    .testimonials-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin: 3rem 0;
+    }
+    
+    .testimonial-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        border-left: 4px solid var(--brand);
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .testimonial-content {
+        margin-bottom: 1rem;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+    
+    .testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .testimonial-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--brand), var(--accent));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+    }
+    
+    .testimonial-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .testimonial-title {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+    
+    .cta-section {
+        background: linear-gradient(135deg, #f7e7cd 0%, #e8d6bf 100%);
+        border-radius: 24px;
+        padding: 3rem 2rem;
+        text-align: center;
+        margin: 4rem 0;
+        border: 1px solid #d7c5ae;
+    }
+    
+    .section-title {
+        text-align: center;
+        margin-bottom: 3rem;
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .section-title h2 {
+        position: relative;
+        display: inline-block;
+        padding-bottom: 12px;
+    }
+    
+    .section-title h2::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 3px;
+        background: var(--brand);
+        border-radius: 2px;
+    }
+    
+    .section-title p {
+        margin-top: 12px;
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+    }
+    
+    .loading-skeleton {
+        background: linear-gradient(90deg, var(--bg-secondary) 25%, rgba(0, 0, 0, 0.05) 50%, var(--bg-secondary) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 2s infinite;
+        height: 200px;
+        border-radius: 12px;
+    }
+    
+    .filter-bar {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .filter-chip {
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-color);
+        cursor: pointer;
+        transition: var(--transition-fast);
+        font-weight: 500;
+    }
+    
+    .filter-chip:hover,
+    .filter-chip.active {
+        border-color: var(--brand);
+        background: rgba(179, 79, 50, 0.1);
+        color: var(--brand);
+    }
+    
+    @media (max-width: 768px) {
+        .hero {
+            padding: 60px 24px;
+        }
+        
+        .cta-section {
+            padding: 2rem 1.5rem;
+        }
+        
+        .testimonials-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero" role="region" aria-label="Hero section - Welcome to Mantra Made 3D Arts">
+    <div class="container">
+        <div class="hero-eyebrow">✨ Welcome to Excellence</div>
+        <h1>Bring Your Imagination to Life</h1>
+        <p>Premium 3D printing solutions for creators, businesses, and innovators. Custom designs, exceptional quality, delivered fast.</p>
+        <div class="hero-cta">
+            <a href="/products" class="btn btn-primary btn-lg">Explore Products</a>
+            <a href="/request-quote" class="btn btn-secondary btn-lg">Request a Quote</a>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section class="container" role="region" aria-label="Product categories">
+    <div class="section-title">
+        <h2>Shop by Category</h2>
+        <p>Discover our curated collections</p>
+    </div>
+    
+    <div id="categories-container" class="categories-grid">
+        <!-- Loading skeleton placeholders -->
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+    </div>
+</section>
+
+<!-- Featured Products Section -->
+<section class="container" role="region" aria-label="Featured products">
+    <div class="section-title">
+        <h2>Featured Products</h2>
+        <p>Handpicked selections for you</p>
+    </div>
+    
+    <!-- Filter Options -->
+    <div class="filter-bar" role="group" aria-label="Product filters">
+        <button class="filter-chip active" data-filter="all" aria-pressed="true">All Products</button>
+        <button class="filter-chip" data-filter="new" aria-pressed="false">New Arrivals</button>
+        <button class="filter-chip" data-filter="bestseller" aria-pressed="false">Best Sellers</button>
+        <button class="filter-chip" data-filter="sale" aria-pressed="false">On Sale</button>
+    </div>
+    
+    <div id="products-container" class="products-grid">
+        <!-- Loading skeleton placeholders -->
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+        <div class="loading-skeleton"></div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 3rem;">
+        <a href="/products" class="btn btn-outline">View All Products</a>
+    </div>
+</section>
+
+<!-- Why Choose Us Section -->
+<section class="container" role="region" aria-label="Why choose us">
+    <div class="section-title">
+        <h2>Why Choose Us</h2>
+        <p>What sets Mantra Made 3D Arts apart</p>
+    </div>
+    
+    <div class="services-grid">
+        <div class="service-card">
+            <div class="service-icon">🎨</div>
+            <h3>Custom Designs</h3>
+            <p>Transform your unique vision into reality with our expert design team. From concept to completion, we're with you every step.</p>
+        </div>
+        
+        <div class="service-card">
+            <div class="service-icon">⚡</div>
+            <h3>Fast Delivery</h3>
+            <p>Quick turnaround times without compromising quality. Most orders ship within 3-5 business days.</p>
+        </div>
+        
+        <div class="service-card">
+            <div class="service-icon">✅</div>
+            <h3>Quality Assurance</h3>
+            <p>Every piece is inspected for excellence. We use premium materials and advanced printing technology.</p>
+        </div>
+        
+        <div class="service-card">
+            <div class="service-icon">💰</div>
+            <h3>Affordable Pricing</h3>
+            <p>Premium quality at competitive prices. Bulk discounts and special offers available for businesses.</p>
+        </div>
+        
+        <div class="service-card">
+            <div class="service-icon">🛡️</div>
+            <h3>Secure Shopping</h3>
+            <p>Your data and transactions are protected with industry-leading security. Shop with confidence.</p>
+        </div>
+        
+        <div class="service-card">
+            <div class="service-icon">👥</div>
+            <h3>Expert Support</h3>
+            <p>Our dedicated team is ready to help. Get expert advice and personalized recommendations anytime.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="container" role="region" aria-label="Customer testimonials">
+    <div class="section-title">
+        <h2>What Our Customers Say</h2>
+        <p>Real feedback from real customers</p>
+    </div>
+    
+    <div class="testimonials-grid">
+        <div class="testimonial-card">
+            <div class="testimonial-content">
+                "Incredible quality and attention to detail! My custom designs came out exactly as I imagined. Highly recommend!"
+            </div>
+            <div class="testimonial-author">
+                <div class="testimonial-avatar">AR</div>
+                <div>
+                    <div class="testimonial-name">Ananya Ramirez</div>
+                    <div class="testimonial-title">Creative Designer</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="testimonial-card">
+            <div class="testimonial-content">
+                "Fast delivery, excellent communication, and perfect prints. This is my go-to for all my 3D printing needs."
+            </div>
+            <div class="testimonial-author">
+                <div class="testimonial-avatar">RK</div>
+                <div>
+                    <div class="testimonial-name">Rohan Kumar</div>
+                    <div class="testimonial-title">Product Developer</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="testimonial-card">
+            <div class="testimonial-content">
+                "Best quality 3D prints I've ever received. The team went above and beyond. Worth every penny!"
+            </div>
+            <div class="testimonial-author">
+                <div class="testimonial-avatar">PM</div>
+                <div>
+                    <div class="testimonial-name">Priya Mehta</div>
+                    <div class="testimonial-title">Business Owner</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter Signup -->
+<section class="cta-section" role="region" aria-label="Newsletter signup">
+    <div class="container">
+        <h2>Stay Updated</h2>
+        <p style="margin-bottom: 2rem;">Get exclusive offers, new product launches, and design tips delivered to your inbox.</p>
+        
+        <form id="newsletter-form" class="flex gap-2" style="max-width: 500px; margin: 0 auto; flex-wrap: wrap;">
+            <input 
+                type="email" 
+                placeholder="Enter your email" 
+                required 
+                aria-label="Email address"
+                style="flex: 1; min-width: 250px;"
+            >
+            <button type="submit" class="btn btn-primary">Subscribe</button>
+        </form>
+    </div>
+</section>
+
+<!-- Scripts -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Load categories
+    async function loadCategories() {
+        const container = document.getElementById('categories-container');
+        try {
+            const data = await App.apiGet('/api/products/categories');
+            const categories = data.categories || [];
+            
+            if (categories.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No categories available</p>';
+                return;
+            }
+            
+            container.innerHTML = categories.map(category => `
+                <a href="/products?category=${category.id}" class="card" style="text-decoration: none; color: inherit;">
+                    <div style="height: 150px; background: linear-gradient(135deg, #eddcc3 0%, #e1ccb0 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                        ${category.icon || '📦'}
+                    </div>
+                    <div class="p-3">
+                        <h3 style="margin: 0;">${category.name}</h3>
+                        <p class="text-sm text-muted" style="margin: 0.5rem 0 0 0;">${category.description || ''}</p>
+                    </div>
+                </a>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<p class="text-center text-error">Failed to load categories</p>';
+        }
+    }
+    
+    // Load featured products
+    async function loadFeaturedProducts() {
+        const container = document.getElementById('products-container');
+        try {
+            const data = await App.apiGet('/api/products?limit=8');
+            const products = data.products || [];
+            
+            if (products.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No products available</p>';
+                return;
+            }
+            
+            container.innerHTML = products.map(product => `
+                <div class="product-card" data-product-id="${product.id}">
+                    <div class="product-image">
+                        ${product.image ? `<img src="${product.image}" alt="${product.name}">` : '📦'}
+                        ${product.discount ? `<span class="product-card-badge">${product.discount}% OFF</span>` : ''}
+                    </div>
+                    <div class="product-card-info">
+                        <h3 class="product-card-name">${product.name}</h3>
+                        <div class="product-card-rating">⭐ ${product.rating || 4.5} (${product.reviews || 0} reviews)</div>
+                        <p class="product-card-description">${product.description ? product.description.substring(0, 100) + '...' : ''}</p>
+                        <div class="product-card-price">
+                            <span class="product-card-price-current">${App.formatPrice(product.price)}</span>
+                            ${product.original_price ? `<span class="product-card-price-original">${App.formatPrice(product.original_price)}</span>` : ''}
+                        </div>
+                        <div class="product-card-actions">
+                            <button class="btn btn-primary btn-sm" data-add-to-cart-btn onclick="App.addToCart(${product.id})">🛒 Add to Cart</button>
+                            <a href="/products/${product.id}" class="btn btn-outline btn-sm">View</a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<p class="text-center text-error">Failed to load products</p>';
+        }
+    }
+    
+    // Filter products
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            document.querySelectorAll('.filter-chip').forEach(c => {
+                c.classList.remove('active');
+                c.setAttribute('aria-pressed', 'false');
+            });
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            
+            const filter = this.getAttribute('data-filter');
+            // TODO: Reload products with filter
+            console.log('Filter:', filter);
+        });
+    });
+    
+    // Newsletter form
+    document.getElementById('newsletter-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = e.target.querySelector('input[type="email"]').value;
+        
+        try {
+            await App.apiPost('/api/newsletter/subscribe', { email });
+            App.Notification.success('Thanks for subscribing!');
+            e.target.reset();
+        } catch (error) {
+            App.Notification.error('Failed to subscribe');
+        }
+    });
+    
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCategories();
+        loadFeaturedProducts();
+    });
+</script>
+{% endblock %}

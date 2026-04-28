@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Support - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .support-layout {
+        display: grid;
+        grid-template-columns: 0.92fr 1.08fr;
+        gap: 1.2rem;
+        align-items: start;
+    }
+
+    .support-panel {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--card-shadow);
+        padding: 1.25rem;
+    }
+
+    .support-card {
+        background: #fffaf4;
+        border: 1px solid #eadccb;
+        border-radius: 16px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .support-contact {
+        display: grid;
+        gap: 0.35rem;
+        color: var(--muted);
+    }
+
+    .support-contact strong {
+        color: #2b231e;
+    }
+
+    .support-form {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .support-form input,
+    .support-form textarea {
+        width: 100%;
+        border: 1px solid #d8c8b5;
+        border-radius: 12px;
+        padding: 0.82rem 0.9rem;
+        font: inherit;
+        background: #fffefb;
+    }
+
+    .support-form textarea {
+        resize: vertical;
+        min-height: 140px;
+    }
+
+    .ticket-item {
+        padding: 12px;
+        border: 1px solid #e8d7c2;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        background: #fffaf4;
+    }
+
+    .ticket-item p {
+        margin-bottom: 0.35rem;
+    }
+
+    @media (max-width: 900px) {
+        .support-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-hero compact">
+    <p class="eyebrow">Support</p>
+    <h1>We’re here to help</h1>
+    <p>Open a ticket and we’ll respond by email.</p>
+</section>
+
+<div class="support-layout">
+    <div class="support-panel">
+        <div class="support-card">
+            <p class="eyebrow">Contact Info</p>
+            <div id="supportContact" class="support-contact"></div>
+        </div>
+
+        <div class="support-card">
+            <p class="eyebrow">Need an answer fast?</p>
+            <h2>Before you submit</h2>
+            <p style="color: var(--muted);">Include order number, product name, or a screenshot if possible. That helps us reply faster.</p>
+        </div>
+    </div>
+
+    <div class="support-panel">
+        <div class="support-card">
+            <p class="eyebrow">Create Ticket</p>
+            <h2>Tell us what happened</h2>
+            <form id="supportForm" class="support-form">
+                <input type="text" id="subject" placeholder="Subject" required>
+                <textarea id="message" rows="5" placeholder="How can we help?" required></textarea>
+                <button type="submit" class="btn btn-primary">Submit Ticket</button>
+            </form>
+            <div id="supportStatus"></div>
+        </div>
+
+        <div class="support-card">
+            <p class="eyebrow">My Tickets</p>
+            <h2>Recent Requests</h2>
+            <div id="ticketList"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadContact() {
+    const response = await fetch('/api/support/contact');
+    const data = await response.json();
+    const contact = data.contact_info || {};
+    document.getElementById('supportContact').innerHTML = `
+        <p><strong>Email:</strong> ${contact.email || ''}</p>
+        <p><strong>Phone:</strong> ${contact.phone || ''}</p>
+        <p><strong>Address:</strong> ${contact.address || ''}</p>
+    `;
+}
+
+function renderTickets(tickets) {
+    const ticketList = document.getElementById('ticketList');
+    if (!tickets || !tickets.length) {
+        ticketList.innerHTML = '<p style="color: var(--muted);">No tickets yet.</p>';
+        return;
+    }
+
+    ticketList.innerHTML = tickets.map(ticket => {
+        const createdAt = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : '-';
+        return `
+            <div class="ticket-item">
+                <p><strong>${ticket.ticket_number || 'Ticket'}</strong> • ${ticket.status || 'open'}</p>
+                <p><strong>Subject:</strong> ${ticket.subject || ''}</p>
+                <p><strong>Created:</strong> ${createdAt}</p>
+                <p>${ticket.message || ''}</p>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadMyTickets() {
+    const response = await apiRequest('/support/tickets');
+    if (!response) {
+        document.getElementById('ticketList').innerHTML = '<p>Please sign in to view tickets.</p>';
+        return;
+    }
+
+    const data = await response.json();
+    renderTickets(data.tickets || []);
+}
+
+document.getElementById('supportForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const response = await createSupportTicket(
+        document.getElementById('subject').value,
+        document.getElementById('message').value,
+        'general',
+        'normal',
+        'email'
+    );
+    document.getElementById('supportStatus').innerHTML = response
+        ? '<div class="alert alert-success">Ticket submitted successfully.</div>'
+        : '<div class="alert alert-error">Failed to submit ticket.</div>';
+
+    if (response) {
+        document.getElementById('supportForm').reset();
+        await loadMyTickets();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadContact();
+    await loadMyTickets();
+});
+</script>
+{% endblock %}

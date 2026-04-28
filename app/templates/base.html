@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_settings.shop_name }}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --brand: {{ site_settings.primary_color }};
+            --accent: {{ site_settings.accent_color }};
+            --bg-solid: {{ site_settings.background_color }};
+            --bg-start: {{ site_settings.background_gradient_start }};
+            --bg-end: {{ site_settings.background_gradient_end }};
+            --wallpaper-overlay-opacity: {{ site_settings.wallpaper_overlay_opacity }};
+        }
+
+        {% if site_settings.background_mode == 'image' and site_settings.wallpaper_image_url %}
+        body {
+            background-image:
+                linear-gradient(rgba(242, 236, 226, var(--wallpaper-overlay-opacity)), rgba(236, 227, 216, var(--wallpaper-overlay-opacity))),
+                url('{{ site_settings.wallpaper_image_url }}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        {% elif site_settings.background_mode == 'solid' %}
+        body {
+            background: var(--bg-solid);
+        }
+        {% else %}
+        body {
+            background: radial-gradient(circle at 15% 12%, var(--bg-start) 0%, var(--bg-solid) 45%, var(--bg-end) 100%);
+        }
+        {% endif %}
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="ambient-shape ambient-shape-1"></div>
+    <div class="ambient-shape ambient-shape-2"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="/app" class="logo">
+                    {% if site_settings.logo_image_url %}
+                    <img src="{{ site_settings.logo_image_url }}" alt="{{ site_settings.shop_name }}" class="logo-image">
+                    {% endif %}
+                    <span class="logo-text">{{ site_settings.shop_name }}</span>
+                </a>
+                <span class="brand-tag">{{ site_settings.brand_tag }}</span>
+            </div>
+            <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+            <ul class="nav-menu" id="siteNavMenu">
+                <li id="adminControlsLink" style="display:none;"><a href="/admin" class="admin-controls-link">Admin Controls</a></li>
+                <li><a href="/products">Products</a></li>
+                <li><a href="/#categories">Categories</a></li>
+                <li id="authLink"><a href="/login">Sign In</a></li>
+                <li id="accountMenu" class="account-menu" style="display:none;">
+                    <button type="button" class="account-trigger" id="accountTrigger">Account</button>
+                    <div class="account-dropdown" id="accountDropdown">
+                        <a href="/profile">Profile</a>
+                        <a href="/cart">My Cart <span class="nav-badge" data-cart-count>0</span></a>
+                        <a href="/orders">My Orders</a>
+                        <a href="/support">Support</a>
+                        <a href="#" onclick="logout()">Logout</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-section">
+            <div class="footer-column">
+                <h4>{{ site_settings.shop_name }}</h4>
+                <p>{{ site_settings.footer_text }}</p>
+            </div>
+            <div class="footer-column">
+                <h4>Contact</h4>
+                <p id="footerEmail">Email: support@3dprintingstore.com</p>
+                <p id="footerPhone">Phone: +91-1234567890</p>
+            </div>
+            <div class="footer-column">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="/products">Shop Products</a></li>
+                    <li><a href="/support">Support</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Business Hours</h4>
+                <p>Mon-Fri: 9:00 AM - 6:00 PM</p>
+                <p>Sat: 10:00 AM - 4:00 PM</p>
+                <p>Sun: Closed</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 {{ site_settings.shop_name }}. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+
+    <script>
+        const navToggle = document.querySelector('.nav-toggle');
+        const navMenu = document.getElementById('siteNavMenu');
+
+        if (navToggle && navMenu) {
+            navToggle.addEventListener('click', () => {
+                const isOpen = navMenu.classList.toggle('nav-menu-open');
+                navToggle.setAttribute('aria-expanded', String(isOpen));
+            });
+        }
+
+        const accountTrigger = document.getElementById('accountTrigger');
+        const accountMenu = document.getElementById('accountMenu');
+
+        if (accountTrigger && accountMenu) {
+            accountTrigger.addEventListener('click', () => {
+                accountMenu.classList.toggle('account-open');
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!accountMenu.contains(event.target)) {
+                    accountMenu.classList.remove('account-open');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

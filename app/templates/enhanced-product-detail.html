@@ -1,0 +1,650 @@
+{% extends "enhanced-base.html" %}
+
+{% block title %}{{ product.name if product else 'Product Not Found' }} - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .breadcrumb {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .breadcrumb a, .breadcrumb span {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .breadcrumb a:hover {
+        color: var(--brand);
+    }
+    
+    .breadcrumb span:last-child {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    
+    .product-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3rem;
+        margin-bottom: 3rem;
+    }
+    
+    .product-gallery {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .product-main-image {
+        width: 100%;
+        height: 500px;
+        background: linear-gradient(135deg, #eddcc3 0%, #e1ccb0 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 5rem;
+        overflow: hidden;
+    }
+    
+    .product-main-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .product-thumbnails {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+    }
+    
+    .product-thumbnail {
+        width: 100px;
+        height: 100px;
+        border-radius: 12px;
+        background: var(--bg-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: var(--transition-fast);
+    }
+    
+    .product-thumbnail:hover,
+    .product-thumbnail.active {
+        border-color: var(--brand);
+    }
+    
+    .product-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .product-header {
+        margin-bottom: 2rem;
+    }
+    
+    .product-title {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .product-rating {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 1rem;
+    }
+    
+    .stars {
+        color: #f59e0b;
+        font-size: 1.2rem;
+    }
+    
+    .rating-count {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .product-pricing {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 2rem;
+    }
+    
+    .price-current {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--brand);
+    }
+    
+    .price-original {
+        font-size: 1.2rem;
+        color: var(--text-muted);
+        text-decoration: line-through;
+    }
+    
+    .discount-badge {
+        background: var(--error);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .product-description {
+        color: var(--text-secondary);
+        line-height: 1.8;
+        margin-bottom: 2rem;
+    }
+    
+    .product-specs {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .specs-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+    
+    .spec-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .spec-item:last-child {
+        border-bottom: none;
+    }
+    
+    .spec-label {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .spec-value {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    
+    .quantity-selector {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .quantity-input {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .quantity-btn {
+        background: none;
+        border: none;
+        padding: 8px 12px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: var(--transition-fast);
+    }
+    
+    .quantity-btn:hover {
+        background: var(--bg-secondary);
+        color: var(--brand);
+    }
+    
+    .quantity-display {
+        padding: 8px 16px;
+        min-width: 50px;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .product-actions {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .product-actions .btn {
+        flex: 1;
+    }
+    
+    .stock-status {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        font-weight: 500;
+    }
+    
+    .stock-status.in-stock {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+    }
+    
+    .stock-status.low-stock {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+    }
+    
+    .stock-status.out-of-stock {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--error);
+    }
+    
+    .related-products {
+        margin-top: 4rem;
+    }
+    
+    .reviews-section {
+        margin-top: 3rem;
+        padding-top: 3rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .review-item {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .review-author {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .review-date {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+    
+    .review-rating {
+        color: #f59e0b;
+        margin-bottom: 0.5rem;
+    }
+    
+    .review-text {
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+    
+    @media (max-width: 768px) {
+        .product-grid {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        
+        .product-main-image {
+            height: 400px;
+            font-size: 3rem;
+        }
+        
+        .product-title {
+            font-size: 1.5rem;
+        }
+        
+        .price-current {
+            font-size: 1.5rem;
+        }
+        
+        .product-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" role="navigation" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span>/</span>
+        <a href="/products">Products</a>
+        <span>/</span>
+        <span>Product Details</span>
+    </nav>
+    
+    {% if product %}
+    <!-- Product Main Section -->
+    <div class="product-grid">
+        <!-- Gallery -->
+        <div class="product-gallery">
+            <div class="product-main-image" id="mainImage">
+                {% if product.image %}
+                    <img src="{{ product.image }}" alt="{{ product.name }}">
+                {% else %}
+                    📦
+                {% endif %}
+            </div>
+            <div class="product-thumbnails" role="region" aria-label="Product gallery thumbnails">
+                {% if product.images %}
+                    {% for image in product.images %}
+                        <button 
+                            class="product-thumbnail {% if loop.first %}active{% endif %}" 
+                            onclick="switchImage(this, '{{ image }}')"
+                            aria-label="View product image {{ loop.index }}"
+                        >
+                            <img src="{{ image }}" alt="Thumbnail {{ loop.index }}">
+                        </button>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Info -->
+        <div class="product-info">
+            <div class="product-header">
+                <h1 class="product-title">{{ product.name }}</h1>
+                
+                <!-- Rating -->
+                <div class="product-rating">
+                    <span class="stars">⭐ {{ product.rating or 4.5 }}</span>
+                    <span class="rating-count">({{ product.reviews or 0 }} reviews)</span>
+                </div>
+                
+                <!-- Pricing -->
+                <div class="product-pricing">
+                    <span class="price-current">{{ "{:,.0f}".format(product.price) if product.price else '0' }} ₹</span>
+                    {% if product.original_price %}
+                        <span class="price-original">{{ "{:,.0f}".format(product.original_price) }} ₹</span>
+                        <span class="discount-badge">
+                            {%- set discount = ((product.original_price - product.price) / product.original_price * 100) | int -%}
+                            {{ discount }}% OFF
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <!-- Stock Status -->
+                {% if product.stock %}
+                    <div class="stock-status in-stock">
+                        ✓ In Stock - Ships within 3-5 business days
+                    </div>
+                {% else %}
+                    <div class="stock-status out-of-stock">
+                        Out of Stock - Notify me when available
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Description -->
+            <p class="product-description">{{ product.description }}</p>
+            
+            <!-- Specifications -->
+            <div class="product-specs">
+                <div class="specs-title">Product Specifications</div>
+                {% if product.specifications %}
+                    {% for spec in product.specifications %}
+                        <div class="spec-item">
+                            <span class="spec-label">{{ spec.label }}</span>
+                            <span class="spec-value">{{ spec.value }}</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="spec-item">
+                        <span class="spec-label">Material</span>
+                        <span class="spec-value">Premium Quality</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Printing Technology</span>
+                        <span class="spec-value">FDM/SLA</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Lead Time</span>
+                        <span class="spec-value">3-5 Days</span>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Quantity Selector -->
+            <div class="quantity-selector">
+                <label for="quantity" style="font-weight: 600;">Quantity:</label>
+                <div class="quantity-input">
+                    <button class="quantity-btn" onclick="decreaseQuantity()">−</button>
+                    <input 
+                        type="number" 
+                        id="quantity" 
+                        class="quantity-display" 
+                        value="1" 
+                        min="1" 
+                        max="100"
+                        aria-label="Product quantity"
+                    >
+                    <button class="quantity-btn" onclick="increaseQuantity()">+</button>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="product-actions">
+                <button class="btn btn-primary btn-lg" data-product-id="{{ product.id if product else 0 }}" data-add-to-cart-btn onclick="App.addToCart({{ product.id if product else 0 }})">🛒 Add to Cart</button>
+                <button class="btn btn-outline btn-lg" onclick="addToWishlist()">❤️ Wishlist</button>
+            </div>
+            
+            <!-- Additional Info -->
+            <div class="card">
+                <div class="card-body">
+                    <h4>🚚 Shipping & Delivery</h4>
+                    <p>Free shipping on orders above ₹500. Delivery available across India within 5-7 business days.</p>
+                    
+                    <h4 style="margin-top: 1rem;">🛡️ Quality Guarantee</h4>
+                    <p>30-day money-back guarantee if not satisfied with the product quality.</p>
+                    
+                    <h4 style="margin-top: 1rem;">📞 Need Help?</h4>
+                    <p><a href="/support">Contact our support team</a> for customization options and bulk orders.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Related Products -->
+    <section class="related-products" role="region" aria-label="Related products">
+        <h2>Related Products</h2>
+        <div id="related-container" class="products-grid" style="margin-top: 2rem;">
+            <div class="loading-skeleton"></div>
+            <div class="loading-skeleton"></div>
+            <div class="loading-skeleton"></div>
+            <div class="loading-skeleton"></div>
+        </div>
+    </section>
+    
+    <!-- Reviews Section -->
+    <section class="reviews-section" role="region" aria-label="Customer reviews">
+        <h2>Customer Reviews</h2>
+        <div id="reviews-container" style="margin-top: 2rem;">
+            <p class="text-muted">No reviews yet. Be the first to review this product!</p>
+        </div>
+        
+        <div class="card" style="margin-top: 2rem;">
+            <div class="card-body">
+                <h3>Write a Review</h3>
+                <form id="review-form" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Rating</label>
+                        <select id="review-rating" required aria-label="Your rating">
+                            <option value="">Select rating...</option>
+                            <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                            <option value="4">⭐⭐⭐⭐ Good</option>
+                            <option value="3">⭐⭐⭐ Average</option>
+                            <option value="2">⭐⭐ Poor</option>
+                            <option value="1">⭐ Very Poor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Your Review</label>
+                        <textarea 
+                            id="review-text" 
+                            placeholder="Share your experience with this product..." 
+                            required
+                            aria-label="Your review text"
+                        ></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                </form>
+            </div>
+        </div>
+    </section>
+    
+    {% else %}
+    <!-- Product Not Found -->
+    <div class="card" style="text-align: center; padding: 3rem;">
+        <h2>Product Not Found</h2>
+        <p class="text-muted" style="margin-top: 1rem;">The product you're looking for doesn't exist or has been removed.</p>
+        <a href="/products" class="btn btn-primary" style="margin-top: 2rem;">Back to Products</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function switchImage(element, imageSrc) {
+        document.querySelectorAll('.product-thumbnail').forEach(t => t.classList.remove('active'));
+        element.classList.add('active');
+        const mainImage = document.getElementById('mainImage');
+        mainImage.innerHTML = `<img src="${imageSrc}" alt="Product image">`;
+    }
+    
+    function increaseQuantity() {
+        const input = document.getElementById('quantity');
+        input.value = Math.min(parseInt(input.value) + 1, 100);
+    }
+    
+    function decreaseQuantity() {
+        const input = document.getElementById('quantity');
+        input.value = Math.max(parseInt(input.value) - 1, 1);
+    }
+    
+    function addToWishlist() {
+        App.Notification.info('Added to wishlist!');
+    }
+    
+    // Update button behavior on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.querySelector('[data-add-to-cart-btn]');
+        if (btn) {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                {% if product %}
+                if (App.isProductInCart({{ product.id }})) {
+                    window.location.href = '/cart';
+                    return;
+                }
+                const quantity = parseInt(document.getElementById('quantity').value);
+                App.addToCart({{ product.id }}, quantity);
+                {% endif %}
+            };
+        }
+    });
+    
+    // Load related products
+    async function loadRelatedProducts() {
+        const container = document.getElementById('related-container');
+        try {
+            const data = await App.apiGet('/api/products?limit=4&exclude={{ product.id if product else 0 }}');
+            const products = data.products || [];
+            
+            if (products.length === 0) {
+                container.innerHTML = '<p class="text-muted">No related products available</p>';
+                return;
+            }
+            
+            container.innerHTML = products.map(p => `
+                <div class="product-card">
+                    <div class="product-image">
+                        ${p.image ? `<img src="${p.image}" alt="${p.name}">` : '📦'}
+                    </div>
+                    <div class="product-card-info">
+                        <h3 class="product-card-name">${p.name}</h3>
+                        <div class="product-card-price">
+                            <span class="product-card-price-current">${App.formatPrice(p.price)}</span>
+                        </div>
+                        <a href="/products/${p.id}" class="btn btn-outline btn-sm" style="width: 100%;">View</a>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<p class="text-error">Failed to load related products</p>';
+        }
+    }
+    
+    // Review form
+    document.getElementById('review-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rating = document.getElementById('review-rating').value;
+        const text = document.getElementById('review-text').value;
+        
+        try {
+            await App.apiPost('/api/reviews', {
+                product_id: {{ product.id if product else 0 }},
+                rating,
+                text
+            });
+            App.Notification.success('Thanks for your review!');
+            e.target.reset();
+            loadReviews();
+        } catch (error) {
+            App.Notification.error('Failed to submit review');
+        }
+    });
+    
+    // Load reviews
+    async function loadReviews() {
+        const container = document.getElementById('reviews-container');
+        try {
+            const data = await App.apiGet('/api/reviews/{{ product.id if product else 0 }}');
+            const reviews = data.reviews || [];
+            
+            if (reviews.length === 0) {
+                container.innerHTML = '<p class="text-muted">No reviews yet. Be the first to review this product!</p>';
+                return;
+            }
+            
+            container.innerHTML = reviews.map(r => `
+                <div class="review-item">
+                    <div class="review-header">
+                        <div>
+                            <div class="review-author">${r.author}</div>
+                            <div class="review-rating">${'⭐'.repeat(r.rating)}</div>
+                        </div>
+                        <div class="review-date">${App.formatDate(r.created_at)}</div>
+                    </div>
+                    <div class="review-text">${r.text}</div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load reviews');
+        }
+    }
+    
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if product %}
+            loadRelatedProducts();
+            loadReviews();
+        {% endif %}
+    });
+</script>
+{% endblock %}

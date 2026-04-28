@@ -1,0 +1,385 @@
+{% extends "enhanced-base.html" %}
+
+{% block title %}Login - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3rem;
+        max-width: 1200px;
+        margin: 4rem auto;
+        padding: 0 20px;
+    }
+    
+    .auth-form-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 3rem;
+    }
+    
+    .auth-welcome-section {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+    
+    .auth-welcome-card {
+        background: linear-gradient(135deg, rgba(179, 79, 50, 0.1) 0%, rgba(31, 110, 100, 0.1) 100%);
+        border: 1px solid rgba(179, 79, 50, 0.2);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .auth-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .auth-form-title {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .auth-form-subtitle {
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-divider {
+        position: relative;
+        margin: 1.5rem 0;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+    
+    .form-divider::before {
+        content: '';
+        display: block;
+        height: 1px;
+        background: var(--border-color);
+        margin-bottom: 0.75rem;
+    }
+    
+    .social-login-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .social-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        cursor: pointer;
+        transition: var(--transition-fast);
+        font-weight: 600;
+    }
+    
+    .social-btn:hover {
+        border-color: var(--text-primary);
+        background: var(--bg-secondary);
+    }
+    
+    .social-btn-icon {
+        font-size: 1.2rem;
+    }
+    
+    .form-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: var(--text-secondary);
+    }
+    
+    .form-link a {
+        color: var(--brand);
+        font-weight: 600;
+        text-decoration: none;
+    }
+    
+    .form-link a:hover {
+        text-decoration: underline;
+    }
+    
+    .auth-benefits {
+        list-style: none;
+        margin: 1.5rem 0;
+    }
+    
+    .auth-benefits li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .auth-benefits li::before {
+        content: '✓';
+        color: var(--success);
+        font-weight: 700;
+        min-width: 20px;
+    }
+    
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 1.1rem;
+    }
+    
+    .password-input-wrapper {
+        position: relative;
+    }
+    
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+        width: auto;
+        cursor: pointer;
+    }
+    
+    .checkbox-wrapper label {
+        margin: 0;
+        cursor: pointer;
+        color: var(--text-secondary);
+    }
+    
+    @media (max-width: 768px) {
+        .auth-container {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin: 2rem auto;
+        }
+        
+        .auth-welcome-section {
+            display: none;
+        }
+        
+        .auth-form-section {
+            padding: 2rem;
+        }
+        
+        .social-login-buttons {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <!-- Form Section -->
+    <div class="auth-form-section">
+        <h1 class="auth-form-title">Welcome Back</h1>
+        <p class="auth-form-subtitle">Login to your Mantra Made 3D Arts account</p>
+        
+        <!-- Social Login -->
+        <div class="social-login-buttons">
+            <button class="social-btn" onclick="loginWithGoogle()" title="Login with Google">
+                <span class="social-btn-icon">🔷</span>
+                <span>Google</span>
+            </button>
+            <button class="social-btn" onclick="loginWithGitHub()" title="Login with GitHub">
+                <span class="social-btn-icon">⚫</span>
+                <span>GitHub</span>
+            </button>
+        </div>
+        
+        <div class="form-divider">OR</div>
+        
+        <!-- Login Form -->
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="you@example.com"
+                    required
+                    aria-label="Email address"
+                >
+                <span class="form-error"></span>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-input-wrapper">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="••••••••"
+                        required
+                        aria-label="Password"
+                        style="padding-right: 40px;"
+                    >
+                    <button 
+                        type="button" 
+                        class="password-toggle" 
+                        onclick="togglePasswordVisibility()"
+                        aria-label="Toggle password visibility"
+                    >
+                        👁️
+                    </button>
+                </div>
+                <span class="form-error"></span>
+            </div>
+            
+            <!-- Remember & Forgot -->
+            <div class="flex-between" style="margin-bottom: 1.5rem;">
+                <label class="checkbox-wrapper">
+                    <input type="checkbox" id="remember" name="remember">
+                    <span>Remember me</span>
+                </label>
+                <a href="/forgot-password" style="color: var(--brand); font-size: 0.9rem;">Forgot password?</a>
+            </div>
+            
+            <!-- Submit -->
+            <button type="submit" class="btn btn-primary btn-lg btn-block">Login</button>
+        </form>
+        
+        <!-- Signup Link -->
+        <div class="form-link">
+            Don't have an account? <a href="/register">Create one</a>
+        </div>
+    </div>
+    
+    <!-- Welcome Section -->
+    <div class="auth-welcome-section">
+        <div class="auth-welcome-card">
+            <div class="auth-icon">🎨</div>
+            <h2>Mantra Made 3D Arts</h2>
+            <p>Premium 3D Printing Solutions</p>
+        </div>
+        
+        <div class="auth-welcome-card" style="background: linear-gradient(135deg, rgba(31, 110, 100, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%); border-color: rgba(31, 110, 100, 0.3);">
+            <div class="auth-icon">✨</div>
+            <h3 style="margin-top: 0;">Exclusive Benefits</h3>
+            <ul class="auth-benefits">
+                <li>Track your orders in real-time</li>
+                <li>Save your favorite products</li>
+                <li>Faster checkout with saved addresses</li>
+                <li>Exclusive member discounts</li>
+                <li>Early access to new designs</li>
+                <li>Personalized recommendations</li>
+            </ul>
+        </div>
+        
+        <div class="auth-welcome-card">
+            <div class="auth-icon">🚀</div>
+            <h3 style="margin-top: 0;">Quick Start</h3>
+            <p style="color: var(--text-secondary);">New to us? No problem! Registration takes just 2 minutes.</p>
+            <a href="/register" class="btn btn-outline" style="width: 100%; margin-top: 1rem;">Create Account</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Form validation setup
+    const loginForm = document.getElementById('login-form');
+    const validator = new App.FormValidator(loginForm);
+    
+    validator.addField('email', {
+        required: true,
+        email: true
+    });
+    
+    validator.addField('password', {
+        required: true,
+        minLength: 6
+    });
+    
+    // Form submission
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!validator.validate()) {
+            App.Notification.error('Please fix the errors above');
+            return;
+        }
+        
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const rememberMe = document.getElementById('remember').checked;
+        
+        try {
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.classList.add('btn-loading');
+            
+            const data = await App.login(email, password);
+            
+            if (rememberMe) {
+                localStorage.setItem('rememberMe', email);
+            }
+            
+            // Redirect to home or previous page
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 500);
+            
+        } catch (error) {
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.classList.remove('btn-loading');
+        }
+    });
+    
+    // Password visibility toggle
+    function togglePasswordVisibility() {
+        const input = document.getElementById('password');
+        const btn = document.querySelector('.password-toggle');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = '🙈';
+        } else {
+            input.type = 'password';
+            btn.textContent = '👁️';
+        }
+    }
+    
+    // Social login handlers
+    async function loginWithGoogle() {
+        App.Notification.info('Google login coming soon...');
+        // TODO: Implement Google OAuth
+    }
+    
+    async function loginWithGitHub() {
+        App.Notification.info('GitHub login coming soon...');
+        // TODO: Implement GitHub OAuth
+    }
+    
+    // Restore remembered email
+    window.addEventListener('load', () => {
+        const remembered = localStorage.getItem('rememberMe');
+        if (remembered) {
+            document.getElementById('email').value = remembered;
+            document.getElementById('remember').checked = true;
+        }
+    });
+</script>
+{% endblock %}

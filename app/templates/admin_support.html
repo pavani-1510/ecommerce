@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Support Manager - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-full-width {
+        width: calc(100vw - 48px);
+        max-width: none;
+        margin-left: calc(50% - 50vw + 24px);
+        margin-right: calc(50% - 50vw + 24px);
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(24, 19, 15, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 120;
+        padding: 20px;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-card {
+        width: min(760px, 100%);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 22px 44px rgba(21, 16, 12, 0.32);
+        padding: 1.2rem;
+    }
+
+    .modal-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid #d8c8b5;
+        background: #fff;
+        font-size: 1.1rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-full-width">
+    <section class="admin-commandbar stack-card">
+        <div>
+            <p class="eyebrow">Admin</p>
+            <h1>Support Manager</h1>
+            <p class="admin-copy">View all customer tickets and manage support contact details.</p>
+        </div>
+        <div class="admin-hero-actions">
+            <a class="button secondary" href="/admin">Back to Home</a>
+            <button type="button" class="button primary" id="editContactTopBtn">Modify Support Contact</button>
+        </div>
+    </section>
+
+    <article class="stack-card admin-panel admin-form-panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Tickets</p>
+                <h2>All support tickets</h2>
+            </div>
+            <p class="section-note">Track incoming requests and ticket status in one place.</p>
+        </div>
+        <div class="admin-collection" id="ticketList"></div>
+    </article>
+
+    <div id="contactModal" class="modal-overlay" aria-hidden="true">
+        <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+            <div class="modal-head">
+                <div>
+                    <p class="eyebrow">Support Contact</p>
+                    <h2 id="contactModalTitle">Modify support contact information</h2>
+                </div>
+                <button type="button" class="modal-close" id="closeContactModalBtn" aria-label="Close">X</button>
+            </div>
+
+            <form id="contactForm" class="admin-form">
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="contact_email">Email</label>
+                        <input id="contact_email" type="email" required>
+                    </div>
+                    <div class="field">
+                        <label for="contact_phone">Phone</label>
+                        <input id="contact_phone" type="text">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="contact_address">Address</label>
+                    <input id="contact_address" type="text">
+                </div>
+
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="contact_city">City</label>
+                        <input id="contact_city" type="text">
+                    </div>
+                    <div class="field">
+                        <label for="contact_state">State</label>
+                        <input id="contact_state" type="text">
+                    </div>
+                </div>
+
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="contact_country">Country</label>
+                        <input id="contact_country" type="text">
+                    </div>
+                    <div class="field">
+                        <label for="contact_postal_code">Postal Code</label>
+                        <input id="contact_postal_code" type="text">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="contact_business_hours">Business Hours</label>
+                    <textarea id="contact_business_hours" rows="3"></textarea>
+                </div>
+
+                <div class="button-row wrap">
+                    <button class="button primary" type="submit">Save Contact</button>
+                    <button class="button secondary" type="button" id="cancelContactModalBtn">Close</button>
+                </div>
+            </form>
+        </article>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openContactModal() {
+    const modal = document.getElementById('contactModal');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeContactModal() {
+    const modal = document.getElementById('contactModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function ticketMeta(ticket) {
+    const created = ticket.created_at ? formatDate(ticket.created_at) : '-';
+    const priority = ticket.priority || 'normal';
+    const status = ticket.status || 'open';
+    return `${created} • Priority: ${priority} • Status: ${status}`;
+}
+
+function renderTickets(tickets) {
+    const list = document.getElementById('ticketList');
+    if (!tickets.length) {
+        list.innerHTML = '<div class="empty-state">No support tickets yet.</div>';
+        return;
+    }
+
+    list.innerHTML = tickets.map(ticket => `
+        <div class="collection-item">
+            <div>
+                <strong>${ticket.subject || 'Untitled Ticket'}</strong>
+                <span>${ticket.ticket_number || ''} • ${ticket.user_name || ticket.user_email || 'Unknown user'}</span>
+                <span>${ticketMeta(ticket)}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadTickets() {
+    const response = await apiRequest('/support/admin/tickets');
+    if (!response) return;
+    const data = await response.json();
+    if (!response.ok) {
+        showNotification(data.error || 'Failed to load tickets', 'error');
+        return;
+    }
+    renderTickets(data.tickets || []);
+}
+
+async function loadContactInfo() {
+    const response = await apiRequest('/support/contact');
+    if (!response) return;
+    const data = await response.json();
+    const contact = data.contact_info || {};
+    document.getElementById('contact_email').value = contact.email || '';
+    document.getElementById('contact_phone').value = contact.phone || '';
+    document.getElementById('contact_address').value = contact.address || '';
+    document.getElementById('contact_city').value = contact.city || '';
+    document.getElementById('contact_state').value = contact.state || '';
+    document.getElementById('contact_country').value = contact.country || '';
+    document.getElementById('contact_postal_code').value = contact.postal_code || '';
+    document.getElementById('contact_business_hours').value = contact.business_hours || '';
+}
+
+document.getElementById('editContactTopBtn').addEventListener('click', async () => {
+    await loadContactInfo();
+    openContactModal();
+    document.getElementById('contact_email').focus();
+});
+
+document.getElementById('closeContactModalBtn').addEventListener('click', closeContactModal);
+document.getElementById('cancelContactModalBtn').addEventListener('click', closeContactModal);
+
+document.getElementById('contactModal').addEventListener('click', (event) => {
+    if (event.target.id === 'contactModal') closeContactModal();
+});
+
+document.getElementById('contactForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const payload = {
+        email: document.getElementById('contact_email').value,
+        phone: document.getElementById('contact_phone').value,
+        address: document.getElementById('contact_address').value,
+        city: document.getElementById('contact_city').value,
+        state: document.getElementById('contact_state').value,
+        country: document.getElementById('contact_country').value,
+        postal_code: document.getElementById('contact_postal_code').value,
+        business_hours: document.getElementById('contact_business_hours').value
+    };
+
+    const response = await apiRequest('/support/contact', {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+    });
+    if (!response) return;
+
+    const data = await response.json();
+    showNotification(response.ok ? (data.message || 'Contact updated') : (data.error || 'Failed to update contact'), response.ok ? 'success' : 'error');
+    if (response.ok) closeContactModal();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!user.id) {
+        window.location.href = '/login';
+        return;
+    }
+    if (!user.is_admin) {
+        showNotification('Admin access required.', 'error');
+        return;
+    }
+    await loadTickets();
+});
+</script>
+{% endblock %}

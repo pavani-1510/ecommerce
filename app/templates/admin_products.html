@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-full-width {
+        width: calc(100vw - 48px);
+        max-width: none;
+        margin-left: calc(50% - 50vw + 24px);
+        margin-right: calc(50% - 50vw + 24px);
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(24, 19, 15, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 120;
+        padding: 20px;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-card {
+        width: min(760px, 100%);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 22px 44px rgba(21, 16, 12, 0.32);
+        padding: 1.2rem;
+    }
+
+    .modal-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid #d8c8b5;
+        background: #fff;
+        font-size: 1.1rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-full-width">
+    <section class="admin-commandbar stack-card">
+        <div>
+            <p class="eyebrow">Admin</p>
+            <h1>Product Manager</h1>
+            <p class="admin-copy">Add, edit, delete, and upload media for products from one page.</p>
+        </div>
+        <div class="admin-hero-actions">
+            <a class="button secondary" href="/admin">Back to Home</a>
+            <button type="button" class="button primary" id="addProductTopBtn">Add Product</button>
+        </div>
+    </section>
+
+    <div>
+        <article class="stack-card admin-panel admin-form-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Products</p>
+                    <h2>Current product cards</h2>
+                </div>
+                <p class="section-note">Select a product to edit or remove it.</p>
+            </div>
+
+            <div class="admin-collection" id="productList"></div>
+        </article>
+
+        <div id="productModal" class="modal-overlay" aria-hidden="true">
+            <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+                <div class="modal-head">
+                    <div>
+                        <p class="eyebrow">Editor</p>
+                        <h2 id="productModalTitle">Add or edit a product</h2>
+                    </div>
+                    <button type="button" class="modal-close" id="closeProductModalBtn" aria-label="Close">X</button>
+                </div>
+                <p class="section-note">Upload a product image file instead of using a URL field.</p>
+
+                <form id="productForm" class="admin-form">
+                    <input type="hidden" id="product_id">
+                    <div class="field">
+                        <label for="categoryId">Category</label>
+                        <select id="categoryId" required></select>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="name">Product Name</label>
+                            <input type="text" id="name" required placeholder="e.g. Mandala Lamp">
+                        </div>
+                        <div class="field">
+                            <label for="price">Price</label>
+                            <input type="number" id="price" step="0.01" required placeholder="799">
+                        </div>
+                    </div>
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="discountPrice">Discount Price</label>
+                            <input type="number" id="discountPrice" step="0.01" placeholder="699">
+                        </div>
+                        <div class="field">
+                            <label for="stockQuantity">Stock Quantity</label>
+                            <input type="number" id="stockQuantity" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="image_file">Product Image</label>
+                        <input id="image_file" type="file" accept="image/*">
+                    </div>
+                    <div class="field">
+                        <label for="description">Description</label>
+                        <textarea id="description" rows="4" placeholder="Describe the product..."></textarea>
+                    </div>
+                    <div class="button-row wrap">
+                        <button type="submit" class="button primary" id="productSubmitBtn">Publish Product</button>
+                        <button type="button" class="button secondary" id="resetProductBtn">Clear</button>
+                        <button type="button" class="button secondary" id="cancelProductModalBtn">Close</button>
+                    </div>
+                </form>
+
+                <div id="adminStatus" class="admin-status"></div>
+            </article>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const state = { categories: [], products: [] };
+
+function openProductModal() {
+    const modal = document.getElementById('productModal');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeProductModal() {
+    const modal = document.getElementById('productModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function imageUrl(value) {
+    return value || 'https://placehold.co/120x120?text=Image';
+}
+
+function parseProductImage(product) {
+    if (!product || !product.images) return '';
+    if (Array.isArray(product.images)) return product.images[0] || '';
+    if (typeof product.images === 'string') {
+        try {
+            const parsed = JSON.parse(product.images);
+            if (Array.isArray(parsed)) return parsed[0] || '';
+        } catch (error) {
+            return product.images;
+        }
+        return product.images;
+    }
+    return '';
+}
+
+async function loadCategories() {
+    const response = await apiRequest('/products/categories');
+    if (!response) return;
+    const data = await response.json();
+    state.categories = data.categories || [];
+    document.getElementById('categoryId').innerHTML = state.categories.map(category => `<option value="${category.id}">${category.name}</option>`).join('');
+}
+
+async function loadProducts() {
+    const response = await apiRequest('/products?limit=100');
+    if (!response) return;
+    const data = await response.json();
+    state.products = data.products || [];
+    renderProducts();
+}
+
+function renderProducts() {
+    const list = document.getElementById('productList');
+    if (!state.products.length) {
+        list.innerHTML = '<div class="empty-state">No products yet.</div>';
+        return;
+    }
+
+    list.innerHTML = state.products.map(product => `
+        <div class="collection-item">
+            <div class="collection-thumb" style="background-image:url('${imageUrl(parseProductImage(product))}')"></div>
+            <div>
+                <strong>${product.name || 'Untitled Product'}</strong>
+                <span>₹${product.price || 0} • ${product.stock_quantity || 0} in stock</span>
+            </div>
+            <div class="button-row compact-buttons">
+                <button type="button" class="button-link" data-edit-product="${product.id}">Edit</button>
+                <button type="button" class="button-link danger-link" data-delete-product="${product.id}">Delete</button>
+            </div>
+        </div>
+    `).join('');
+
+    list.querySelectorAll('[data-edit-product]').forEach(button => {
+        button.addEventListener('click', () => {
+            const product = state.products.find(item => item.id === button.dataset.editProduct);
+            if (!product) return;
+            document.getElementById('product_id').value = product.id;
+            document.getElementById('categoryId').value = product.category_id || '';
+            document.getElementById('name').value = product.name || '';
+            document.getElementById('price').value = product.price || '';
+            document.getElementById('discountPrice').value = product.discount_price || '';
+            document.getElementById('stockQuantity').value = product.stock_quantity || 0;
+            document.getElementById('description').value = product.description || '';
+            document.getElementById('productSubmitBtn').textContent = 'Update Product';
+            openProductModal();
+        });
+    });
+
+    list.querySelectorAll('[data-delete-product]').forEach(button => {
+        button.addEventListener('click', () => deleteProduct(button.dataset.deleteProduct));
+    });
+}
+
+async function deleteProduct(id) {
+    if (!confirm('Delete this product?')) return;
+    const response = await apiRequest(`/products/admin/${id}`, { method: 'DELETE' });
+    if (!response) return;
+    const data = await response.json();
+    showNotification(response.ok ? (data.message || 'Product deleted') : (data.error || 'Failed to delete product'), response.ok ? 'success' : 'error');
+    if (response.ok) {
+        resetProductForm();
+        await loadProducts();
+    }
+}
+
+function resetProductForm() {
+    document.getElementById('productForm').reset();
+    document.getElementById('product_id').value = '';
+    document.getElementById('productSubmitBtn').textContent = 'Publish Product';
+}
+
+document.getElementById('resetProductBtn').addEventListener('click', resetProductForm);
+
+document.getElementById('addProductTopBtn').addEventListener('click', () => {
+    resetProductForm();
+    openProductModal();
+    document.getElementById('name').focus();
+});
+
+document.getElementById('closeProductModalBtn').addEventListener('click', closeProductModal);
+document.getElementById('cancelProductModalBtn').addEventListener('click', closeProductModal);
+
+document.getElementById('productModal').addEventListener('click', (event) => {
+    if (event.target.id === 'productModal') closeProductModal();
+});
+
+document.getElementById('productForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const productId = document.getElementById('product_id').value;
+    const formData = new FormData();
+    if (productId) formData.append('id', productId);
+    formData.append('category_id', document.getElementById('categoryId').value);
+    formData.append('name', document.getElementById('name').value);
+    formData.append('price', document.getElementById('price').value);
+    formData.append('discount_price', document.getElementById('discountPrice').value);
+    formData.append('stock_quantity', document.getElementById('stockQuantity').value);
+    formData.append('description', document.getElementById('description').value);
+    const file = document.getElementById('image_file').files[0];
+    if (file) formData.append('image_file', file);
+
+    const response = await apiRequest('/products/admin', {
+        method: productId ? 'PUT' : 'POST',
+        body: formData
+    });
+
+    if (!response) return;
+
+    const data = await response.json();
+    document.getElementById('adminStatus').innerHTML = response.ok
+        ? '<div class="alert alert-success">Product saved successfully.</div>'
+        : `<div class="alert alert-error">${data.error || 'Failed to save product'}</div>`;
+
+    if (response.ok) {
+        resetProductForm();
+        closeProductModal();
+        await loadProducts();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!user.id) {
+        window.location.href = '/login';
+        return;
+    }
+    if (!user.is_admin) {
+        document.getElementById('adminStatus').innerHTML = '<div class="alert alert-error">Admin access required.</div>';
+        return;
+    }
+    await loadCategories();
+    await loadProducts();
+});
+</script>
+{% endblock %}

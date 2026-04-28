@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Mantra Made 3D Arts{% endblock %}
+
+{% block content %}
+<section class="page-hero compact">
+    <p class="eyebrow">Account</p>
+    <h1>Your Profile</h1>
+    <p>View your account details and role.</p>
+</section>
+
+<div id="profileCard" class="profile-card"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadProfile() {
+    const response = await apiRequest('/auth/profile');
+    if (!response) return;
+    const data = await response.json();
+    const user = data.user || {};
+    document.getElementById('profileCard').innerHTML = `
+        <div class="stack-card">
+            <div>
+                <h2>${user.full_name || 'Member'}</h2>
+                <p>${user.email || ''}</p>
+            </div>
+            <strong>${user.is_admin ? 'Admin' : 'Member'}</strong>
+        </div>
+    `;
+}
+
+document.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+{% endblock %}

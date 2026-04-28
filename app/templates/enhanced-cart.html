@@ -1,0 +1,459 @@
+{% extends "enhanced-base.html" %}
+
+{% block title %}Shopping Cart - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cart-container {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+    
+    .cart-items {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .cart-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .cart-item {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        display: grid;
+        grid-template-columns: 120px 1fr 120px;
+        gap: 1.5rem;
+        align-items: center;
+    }
+    
+    .cart-item:last-child {
+        border-bottom: none;
+    }
+    
+    .cart-item-image {
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, #eddcc3 0%, #e1ccb0 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        overflow: hidden;
+    }
+    
+    .cart-item-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .cart-item-details {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .cart-item-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 1rem;
+        line-height: 1.4;
+    }
+    
+    .cart-item-price {
+        color: var(--brand);
+        font-weight: 700;
+        font-size: 1.2rem;
+    }
+    
+    .cart-item-meta {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+    
+    .cart-item-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .cart-quantity {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .cart-quantity button {
+        background: none;
+        border: none;
+        padding: 6px 10px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: var(--transition-fast);
+    }
+    
+    .cart-quantity button:hover {
+        background: var(--bg-secondary);
+        color: var(--brand);
+    }
+    
+    .cart-quantity input {
+        border: none;
+        width: 45px;
+        text-align: center;
+        padding: 6px 0;
+        background: transparent;
+        font-weight: 600;
+    }
+    
+    .cart-remove {
+        background: none;
+        border: none;
+        color: var(--error);
+        cursor: pointer;
+        font-size: 1rem;
+        transition: var(--transition-fast);
+    }
+    
+    .cart-remove:hover {
+        transform: scale(1.2);
+    }
+    
+    .cart-empty {
+        padding: 3rem;
+        text-align: center;
+    }
+    
+    .cart-empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .cart-summary {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+    
+    .summary-title {
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        font-size: 1.1rem;
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .summary-item.total {
+        padding-top: 12px;
+        border-top: 2px solid var(--border-color);
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    
+    .summary-item.total-value {
+        color: var(--brand);
+        font-size: 1.3rem;
+    }
+    
+    .coupon-input {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .coupon-input input {
+        flex: 1;
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .coupon-input button {
+        padding: 10px 16px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+    
+    .coupon-input button:hover {
+        background: var(--accent-dark);
+    }
+    
+    .checkout-btn {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .continue-shopping-btn {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .cart-benefits {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        font-size: 0.85rem;
+        color: var(--success);
+        text-align: center;
+    }
+    
+    .continue-shopping {
+        text-align: center;
+        margin-top: 3rem;
+    }
+    
+    @media (max-width: 1024px) {
+        .cart-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .cart-summary {
+            position: static;
+        }
+    }
+    
+    @media (max-width: 640px) {
+        .cart-item {
+            grid-template-columns: 80px 1fr;
+            gap: 1rem;
+        }
+        
+        .cart-item-image {
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
+        }
+        
+        .cart-item-actions {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="margin-bottom: 2rem;">🛒 Shopping Cart</h1>
+    
+    <div class="cart-container">
+        <!-- Cart Items -->
+        <div id="cart-items-container" class="cart-items">
+            <div class="cart-empty">
+                <div class="cart-empty-icon">🛒</div>
+                <h2>Your Cart is Empty</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Add some amazing 3D printed items to get started!</p>
+                <a href="/products" class="btn btn-primary">Start Shopping</a>
+            </div>
+        </div>
+        
+        <!-- Cart Summary -->
+        <div class="cart-summary">
+            <div class="summary-title">Order Summary</div>
+            
+            <!-- Coupon -->
+            <div class="coupon-input">
+                <input type="text" id="coupon-code" placeholder="Coupon code" aria-label="Enter coupon code">
+                <button onclick="applyCoupon()" aria-label="Apply coupon">Apply</button>
+            </div>
+            
+            <!-- Summary Items -->
+            <div class="summary-item">
+                <span>Subtotal</span>
+                <span id="subtotal">₹0</span>
+            </div>
+            <div class="summary-item">
+                <span>Discount</span>
+                <span id="discount" style="color: var(--success);">-₹0</span>
+            </div>
+            <div class="summary-item">
+                <span>Shipping</span>
+                <span id="shipping">₹0</span>
+            </div>
+            <div class="summary-item">
+                <span>Tax</span>
+                <span id="tax">₹0</span>
+            </div>
+            
+            <div class="summary-item total">
+                <span>Total</span>
+                <span class="summary-item total-value" id="total">₹0</span>
+            </div>
+            
+            <!-- Benefits -->
+            <div class="cart-benefits">
+                ✓ Free shipping on orders over ₹500<br>
+                ✓ 30-day money-back guarantee<br>
+                ✓ Secure checkout
+            </div>
+            
+            <!-- Actions -->
+            <a href="/checkout" class="btn btn-primary checkout-btn" style="margin-top: 1rem;">Proceed to Checkout</a>
+            <a href="/products" class="btn btn-ghost continue-shopping-btn">Continue Shopping</a>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+    let cart = [];
+    
+    async function loadCart() {
+        try {
+            if (App.isAuthenticated()) {
+                const data = await App.apiGet('/api/cart');
+                cart = data.items || [];
+            } else {
+                cart = App.AppState.cart;
+            }
+            renderCart();
+        } catch (error) {
+            console.error('Failed to load cart:', error);
+        }
+    }
+    
+    function renderCart() {
+        const container = document.getElementById('cart-items-container');
+        
+        if (cart.length === 0) {
+            container.innerHTML = `
+                <div class="cart-empty">
+                    <div class="cart-empty-icon">🛒</div>
+                    <h2>Your Cart is Empty</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Add some amazing 3D printed items to get started!</p>
+                    <a href="/products" class="btn btn-primary">Start Shopping</a>
+                </div>
+            `;
+            disableCheckoutButton();
+            return;
+        }
+        
+        const itemsHTML = `
+            <div class="cart-header">Items in Cart (${cart.length})</div>
+            ${cart.map((item, index) => `
+                <div class="cart-item" data-item-id="${item.id || index}">
+                    <div class="cart-item-image">
+                        ${item.image ? `<img src="${item.image}" alt="${item.name}">` : '📦'}
+                    </div>
+                    
+                    <div class="cart-item-details">
+                        <div class="cart-item-name">${item.name}</div>
+                        <div class="cart-item-price">${App.formatPrice(item.price)}</div>
+                        <div class="cart-item-meta">
+                            ${item.sku ? `SKU: ${item.sku}` : 'Premium 3D Model'}
+                        </div>
+                    </div>
+                    
+                    <div class="cart-item-actions">
+                        <div class="cart-quantity">
+                            <button onclick="updateQuantity(${item.id || index}, -1)">−</button>
+                            <input type="number" value="${item.quantity || 1}" readonly>
+                            <button onclick="updateQuantity(${item.id || index}, 1)">+</button>
+                        </div>
+                        <button class="cart-remove" onclick="removeItem(${item.id || index})" title="Remove from cart">🗑️</button>
+                    </div>
+                </div>
+            `).join('')}
+        `;
+        
+        container.innerHTML = itemsHTML;
+        updateSummary();
+        enableCheckoutButton();
+    }
+    
+    function updateQuantity(itemId, delta) {
+        const item = cart.find(i => i.id === itemId || (typeof itemId === 'number' && cart.indexOf(i) === itemId));
+        if (item) {
+            item.quantity = Math.max(1, (item.quantity || 1) + delta);
+            if (App.isAuthenticated()) {
+                App.apiPut(`/api/cart/${itemId}`, { quantity: item.quantity });
+            } else {
+                App.AppState.saveCart();
+            }
+            renderCart();
+        }
+    }
+    
+    function removeItem(itemId) {
+        if (confirm('Remove item from cart?')) {
+            cart = cart.filter((i, idx) => i.id !== itemId && idx !== itemId);
+            
+            if (App.isAuthenticated()) {
+                App.apiDelete(`/api/cart/${itemId}`);
+            } else {
+                App.AppState.cart = cart;
+                App.AppState.saveCart();
+            }
+            renderCart();
+        }
+    }
+    
+    function updateSummary() {
+        const subtotal = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+        const discount = 0; // Applied coupon discount
+        const shipping = subtotal > 500 ? 0 : 100;
+        const tax = Math.round(subtotal * 0.05);
+        const total = subtotal - discount + shipping + tax;
+        
+        document.getElementById('subtotal').textContent = App.formatPrice(subtotal);
+        document.getElementById('discount').textContent = `-${App.formatPrice(discount)}`;
+        document.getElementById('shipping').textContent = shipping === 0 ? 'FREE' : App.formatPrice(shipping);
+        document.getElementById('tax').textContent = App.formatPrice(tax);
+        document.getElementById('total').textContent = App.formatPrice(total);
+    }
+    
+    function applyCoupon() {
+        const code = document.getElementById('coupon-code').value;
+        if (!code) {
+            App.Notification.warning('Please enter a coupon code');
+            return;
+        }
+        App.Notification.info(`Coupon "${code}" applied!`);
+        // TODO: Apply actual discount
+    }
+    
+    function disableCheckoutButton() {
+        const btn = document.querySelector('.checkout-btn');
+        if (btn) btn.classList.add('btn-disabled');
+    }
+    
+    function enableCheckoutButton() {
+        const btn = document.querySelector('.checkout-btn');
+        if (btn) btn.classList.remove('btn-disabled');
+    }
+    
+    // Load cart on page load
+    document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+{% endblock %}

@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+
+{% block title %}Product - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-detail-shell {
+        display: grid;
+        gap: 1.2rem;
+    }
+
+    .product-detail-card,
+    .detail-reviews,
+    .detail-similar {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--card-shadow);
+        padding: 1.1rem;
+    }
+
+    .product-detail-card {
+        display: grid;
+        grid-template-columns: minmax(280px, 0.95fr) minmax(0, 1.2fr);
+        gap: 1rem;
+    }
+
+    .product-detail-image {
+        border-radius: 14px;
+        min-height: 320px;
+        background-color: #e9d7c1;
+    }
+
+    .detail-price {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--accent);
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin: 0.8rem 0;
+        flex-wrap: wrap;
+    }
+
+    .detail-meta {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 0.92rem;
+    }
+
+    .star-row {
+        color: #b07a23;
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+    }
+
+    .review-list {
+        display: grid;
+        gap: 0.7rem;
+        margin-top: 0.8rem;
+    }
+
+    .review-item {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fffaf4;
+        padding: 0.8rem;
+    }
+
+    .review-item p {
+        color: var(--muted);
+        font-size: 0.92rem;
+    }
+
+    .similar-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 0.9rem;
+        margin-top: 0.8rem;
+    }
+
+    .review-form {
+        display: grid;
+        gap: 0.7rem;
+        margin-top: 0.8rem;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(24, 19, 15, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 120;
+        padding: 20px;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-card {
+        width: min(760px, 100%);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 22px 44px rgba(21, 16, 12, 0.32);
+        padding: 1.1rem;
+    }
+
+    .modal-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid #d8c8b5;
+        background: #fff;
+        font-size: 1.1rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .review-form select,
+    .review-form textarea {
+        width: 100%;
+        border: 1px solid #d8c8b5;
+        border-radius: 10px;
+        padding: 0.7rem 0.8rem;
+        font: inherit;
+        background: #fffefb;
+    }
+
+    @media (max-width: 880px) {
+        .product-detail-card {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="product-detail-shell">
+    <div id="productDetail" class="product-detail-card"></div>
+    <div class="detail-similar">
+        <h2>Similar Products</h2>
+        <div id="similarProducts" class="similar-grid"></div>
+    </div>
+</section>
+
+<div id="reviewsModal" class="modal-overlay" aria-hidden="true">
+    <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="reviewsModalTitle">
+        <div class="modal-head">
+            <h2 id="reviewsModalTitle">Ratings & Reviews</h2>
+            <button type="button" class="modal-close" id="closeReviewsModalBtn" aria-label="Close">X</button>
+        </div>
+        <div id="reviewFormMount"></div>
+        <div id="reviewList" class="review-list"></div>
+        <div class="detail-actions">
+            <button class="btn btn-secondary" type="button" id="closeReviewsModalFooterBtn">Close</button>
+        </div>
+    </article>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function starText(value) {
+    const rating = Math.max(0, Math.min(5, Number(value || 0)));
+    const full = Math.round(rating);
+    return `${'★'.repeat(full)}${'☆'.repeat(5 - full)}`;
+}
+
+function ratingLine(rating, count) {
+    const ratingValue = Number(rating || 0);
+    const ratingCount = Number(count || 0);
+    if (ratingValue <= 0 || ratingCount <= 0) return '';
+    const label = ratingCount === 1 ? 'rating' : 'ratings';
+    return `${starText(ratingValue)} (${ratingCount} ${label})`;
+}
+
+let activeProductId = null;
+let activeCategoryId = null;
+let firstLoadedReviews = [];
+
+function openReviewsModal() {
+    const modal = document.getElementById('reviewsModal');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeReviewsModal() {
+    const modal = document.getElementById('reviewsModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function firstImage(product) {
+    return Array.isArray(product.images) && product.images.length
+        ? product.images[0]
+        : 'https://via.placeholder.com/900x700?text=Mantra+Made+3D+Arts';
+}
+
+function renderReviewList(reviews) {
+    const list = document.getElementById('reviewList');
+    if (!reviews || !reviews.length) {
+        list.innerHTML = '<div class="empty-state">No reviews yet. Be the first to review this product.</div>';
+        return;
+    }
+
+    list.innerHTML = reviews.map(review => `
+        <article class="review-item">
+            <strong>${review.users?.full_name || 'Customer'}</strong>
+            <div class="star-row">${starText(review.rating)} (${review.rating || 0}/5)</div>
+            <p>${review.comment || review.review_text || 'No text provided.'}</p>
+        </article>
+    `).join('');
+}
+
+function renderSimilarProducts(products) {
+    const grid = document.getElementById('similarProducts');
+    if (!products || !products.length) {
+        grid.innerHTML = '<div class="empty-state">No similar products found.</div>';
+        return;
+    }
+
+    grid.innerHTML = products.map(product => `
+        <article class="product-card">
+            <a href="/products/${product.id}">
+                <div class="product-image" style="background-image:url('${firstImage(product)}'); background-size:cover; background-position:center;"></div>
+                <h3>${product.name}</h3>
+                ${ratingLine(product.rating, product.total_reviews) ? `<p class="product-rating-line">${ratingLine(product.rating, product.total_reviews)}</p>` : ''}
+                <p class="price">₹${product.discount_price || product.price}</p>
+                ${product.discount_price ? `<p class="original-price">₹${product.price}</p>` : ''}
+                <button class="btn btn-sm" onclick="event.preventDefault(); addToCart('${product.id}')">Add to Cart</button>
+            </a>
+        </article>
+    `).join('');
+}
+
+function mountReviewForm(productId) {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const target = document.getElementById('reviewFormMount');
+
+    if (!user.id) {
+        target.innerHTML = '<p class="section-note">Sign in to submit a review and rating.</p>';
+        return;
+    }
+
+    target.innerHTML = `
+        <form id="reviewForm" class="review-form">
+            <label for="reviewRating">Your Rating</label>
+            <select id="reviewRating" required>
+                <option value="">Select rating</option>
+                <option value="5">5 - Excellent</option>
+                <option value="4">4 - Very Good</option>
+                <option value="3">3 - Good</option>
+                <option value="2">2 - Fair</option>
+                <option value="1">1 - Poor</option>
+            </select>
+            <label for="reviewComment">Your Review</label>
+            <textarea id="reviewComment" rows="3" placeholder="Share your experience..."></textarea>
+            <button class="btn btn-primary" type="submit">Submit Review</button>
+        </form>
+    `;
+
+    document.getElementById('reviewForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const response = await apiRequest(`/products/${productId}/reviews`, {
+            method: 'POST',
+            body: JSON.stringify({
+                rating: Number(document.getElementById('reviewRating').value),
+                comment: document.getElementById('reviewComment').value
+            })
+        });
+
+        if (!response) return;
+        const data = await response.json();
+        showNotification(response.ok ? (data.message || 'Review submitted') : (data.error || 'Failed to submit review'), response.ok ? 'success' : 'error');
+        if (response.ok) {
+            await loadReviews(productId);
+            document.getElementById('reviewForm').reset();
+        }
+    });
+}
+
+async function loadReviews(productId) {
+    const response = await fetch(`/api/products/${productId}/reviews`);
+    const data = await response.json();
+    if (!response.ok) {
+        renderReviewList([]);
+        return;
+    }
+    renderReviewList(data.reviews || []);
+}
+
+async function loadSimilarProducts(productId, categoryId) {
+    const response = await fetch(`/api/products/${productId}/similar?limit=6`);
+    const data = await response.json();
+    const similar = response.ok ? (data.products || []) : [];
+    if (similar.length > 0) {
+        renderSimilarProducts(similar);
+        return;
+    }
+
+    if (!categoryId) {
+        renderSimilarProducts([]);
+        return;
+    }
+
+    const fallbackResponse = await fetch(`/api/products/?limit=8&category_id=${encodeURIComponent(categoryId)}`);
+    const fallbackData = await fallbackResponse.json();
+    if (!fallbackResponse.ok) {
+        renderSimilarProducts([]);
+        return;
+    }
+
+    const fallbackProducts = (fallbackData.products || []).filter(item => item.id !== productId);
+    renderSimilarProducts(fallbackProducts);
+}
+
+async function buyNow(productId) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    const response = await apiRequest('/orders/buy-now', {
+        method: 'POST',
+        body: JSON.stringify({
+            product_id: productId,
+            quantity: 1,
+            payment_method: 'cod'
+        })
+    });
+
+    if (!response) return;
+    const data = await response.json();
+    if (!response.ok) {
+        showNotification(data.error || 'Failed to buy now', 'error');
+        return;
+    }
+
+    showNotification(data.message || 'Order placed successfully', 'success');
+    window.location.href = '/profile';
+}
+
+async function openReviewsPanel() {
+    if (!activeProductId) return;
+    openReviewsModal();
+    mountReviewForm(activeProductId);
+    renderReviewList(firstLoadedReviews);
+    await loadReviews(activeProductId);
+}
+
+async function loadProductDetail() {
+    const container = document.getElementById('productDetail');
+    const productId = "{{ product_id }}";
+
+    try {
+        const response = await fetch(`/api/products/${productId}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.product) {
+            container.innerHTML = `
+                <div class="product-detail-content">
+                    <p class="eyebrow">Product</p>
+                    <h1>Unable to load this product</h1>
+                    <p class="detail-copy">${data.error || 'Please try again in a moment.'}</p>
+                    <div class="detail-actions">
+                        <a href="/products" class="btn btn-secondary">Back to Products</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const product = data.product;
+        const productImage = firstImage(product);
+        activeProductId = productId;
+        activeCategoryId = product.category_id || null;
+        firstLoadedReviews = product.reviews || [];
+        const ratingSummary = ratingLine(product.average_rating || product.rating, product.total_reviews || (product.reviews || []).length || 0);
+        const hasPositiveRating = Boolean(ratingSummary);
+        const numericRating = Number(product.average_rating || product.rating || 0);
+
+        container.innerHTML = `
+            <div class="product-detail-image" style="background-image:url('${productImage}'); background-size:cover; background-position:center;"></div>
+            <div class="product-detail-content">
+                <p class="eyebrow">${product.categories?.name || 'Product'}</p>
+                <h1>${product.name}</h1>
+                <p class="detail-price">₹${product.discount_price || product.price}</p>
+                ${hasPositiveRating ? `<p class="star-row">${ratingSummary}</p>` : ''}
+                ${product.discount_price ? `<p class="original-price">₹${product.price}</p>` : ''}
+                <p class="detail-copy">${product.description || ''}</p>
+                <div class="detail-actions">
+                    <button class="btn btn-primary" onclick="addToCart('${product.id}')">Add to Cart</button>
+                    <button class="btn btn-secondary" type="button" onclick="buyNow('${product.id}')">Buy Now</button>
+                    <button class="btn btn-secondary" type="button" id="reviewToggleBtn">Rate</button>
+                </div>
+                <div class="detail-meta">
+                    ${numericRating > 0 ? `<span>Rating: ${numericRating}</span>` : ''}
+                    <span>Stock: ${product.stock_quantity}</span>
+                </div>
+            </div>
+        `;
+
+        const toggleButton = document.getElementById('reviewToggleBtn');
+        if (toggleButton) {
+            toggleButton.addEventListener('click', openReviewsPanel);
+        }
+
+        await loadSimilarProducts(productId, activeCategoryId);
+    } catch (error) {
+        container.innerHTML = `
+            <div class="product-detail-content">
+                <p class="eyebrow">Product</p>
+                <h1>Unable to load this product</h1>
+                <p class="detail-copy">${error.message || 'Unknown error'}</p>
+                <div class="detail-actions">
+                    <a href="/products" class="btn btn-secondary">Browse Products</a>
+                </div>
+            </div>
+        `;
+        renderReviewList([]);
+        renderSimilarProducts([]);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadProductDetail);
+document.getElementById('closeReviewsModalBtn').addEventListener('click', closeReviewsModal);
+document.getElementById('closeReviewsModalFooterBtn').addEventListener('click', closeReviewsModal);
+document.getElementById('reviewsModal').addEventListener('click', (event) => {
+    if (event.target.id === 'reviewsModal') closeReviewsModal();
+});
+</script>
+{% endblock %}

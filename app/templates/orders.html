@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Orders - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .orders-wrap {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .order-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--card-shadow);
+        padding: 0.9rem;
+    }
+
+    .order-head {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .order-meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+    }
+
+    .order-items {
+        display: grid;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .order-item {
+        border: 1px solid #eadccb;
+        border-radius: 10px;
+        padding: 0.6rem;
+        background: #fffaf4;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.22rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        border: 1px solid #d8c8b5;
+        background: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-hero compact">
+    <p class="eyebrow">Orders</p>
+    <h1>My Orders</h1>
+    <p>Track all your placed orders and payment status.</p>
+</section>
+
+<div id="ordersList" class="orders-wrap"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function renderOrders(orders) {
+    const root = document.getElementById('ordersList');
+    if (!orders || !orders.length) {
+        root.innerHTML = '<div class="empty-state">No orders found yet.</div>';
+        return;
+    }
+
+    root.innerHTML = orders.map(order => {
+        const createdAt = order.created_at ? formatDate(order.created_at) : '-';
+        const items = order.order_items || [];
+
+        const itemsHtml = items.length
+            ? items.map(item => {
+                const product = item.products || {};
+                return `
+                    <div class="order-item">
+                        <div>
+                            <strong>${product.name || 'Item'}</strong>
+                            <div class="order-meta">Qty: ${item.quantity || 0}</div>
+                        </div>
+                        <strong>₹${Number(item.total_price || 0).toFixed(2)}</strong>
+                    </div>
+                `;
+            }).join('')
+            : '<div class="order-meta">No item details available.</div>';
+
+        return `
+            <article class="order-card">
+                <div class="order-head">
+                    <div>
+                        <strong>${order.order_number || 'Order'}</strong>
+                        <div class="order-meta">Placed: ${createdAt}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="status-badge">${order.order_status || 'pending'}</div>
+                        <div class="order-meta">Payment: ${order.payment_status || 'pending'}</div>
+                        <strong>₹${Number(order.total_amount || 0).toFixed(2)}</strong>
+                    </div>
+                </div>
+                <div class="order-items">${itemsHtml}</div>
+            </article>
+        `;
+    }).join('');
+}
+
+async function loadOrders() {
+    const response = await apiRequest('/orders');
+    if (!response) return;
+
+    const data = await response.json();
+    if (!response.ok) {
+        document.getElementById('ordersList').innerHTML = `<div class="alert alert-error">${data.error || 'Failed to load orders'}</div>`;
+        return;
+    }
+
+    renderOrders(data.orders || []);
+}
+
+document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+{% endblock %}

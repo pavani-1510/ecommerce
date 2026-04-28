@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Mantra Made 3D Arts{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <p class="auth-kicker">Mantra Made 3D Arts</p>
+        <h2>Sign In</h2>
+        <p class="auth-subtitle">Sign in with email and password. Create account with password only.</p>
+
+        <form id="passwordForm" class="auth-form auth-form-visible">
+            <div class="form-group">
+                <label for="loginEmail">Email Address</label>
+                <input type="email" id="loginEmail" name="email" required placeholder="your@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" name="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Sign In</button>
+            <p class="auth-link">New here? <button type="button" class="text-link" id="toggleSignupLink">Create account</button></p>
+            <p class="auth-link"><button type="button" class="text-link" id="toggleOtpLink">Sign in with OTP</button></p>
+        </form>
+
+        <form id="signupForm" class="auth-form" style="display:none;">
+            <div class="form-group">
+                <label for="signupName">Full Name</label>
+                <input type="text" id="signupName" name="full_name" required placeholder="Your name">
+            </div>
+
+            <div class="form-group">
+                <label for="signupEmail">Email Address</label>
+                <input type="email" id="signupEmail" name="email" required placeholder="your@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="signupPassword">Password</label>
+                <input type="password" id="signupPassword" name="password" required placeholder="••••••••">
+            </div>
+
+            <div class="form-group">
+                <label for="signupConfirmPassword">Confirm Password</label>
+                <input type="password" id="signupConfirmPassword" name="confirm_password" required placeholder="••••••••">
+            </div>
+
+            <div class="form-group">
+                <label for="signupPhone">Phone Number (optional)</label>
+                <input type="tel" id="signupPhone" name="phone" placeholder="9876543210">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create Account</button>
+            <p class="auth-link">Already have an account? <button type="button" class="text-link" id="togglePasswordFromSignup">Sign in</button></p>
+            <p class="auth-link"><button type="button" class="text-link" id="toggleOtpFromSignup">Sign in with OTP</button></p>
+        </form>
+
+        <form id="otpForm" class="auth-form" style="display:none;">
+            <div class="form-group">
+                <label for="otpEmail">Email Address</label>
+                <input type="email" id="otpEmail" name="email" required placeholder="your@email.com">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Send OTP</button>
+
+            <div id="otpInputDiv" style="display:none; margin-top: 20px;">
+                <div class="form-group">
+                    <label for="otpCode">Enter OTP</label>
+                    <input type="text" id="otpCode" name="otp" maxlength="6" placeholder="000000">
+                </div>
+                <button type="button" class="btn btn-primary" id="verifyOtpBtn">Verify OTP</button>
+            </div>
+
+            <p class="auth-link">Prefer password? <button type="button" class="text-link" id="togglePasswordFromOtp">Sign in with password</button></p>
+        </form>
+
+    </div>
+</div>
+
+<script>
+    function showPasswordForm() {
+        document.getElementById('passwordForm').style.display = 'block';
+        document.getElementById('signupForm').style.display = 'none';
+        document.getElementById('otpForm').style.display = 'none';
+    }
+
+    function showSignupForm() {
+        document.getElementById('passwordForm').style.display = 'none';
+        document.getElementById('signupForm').style.display = 'block';
+        document.getElementById('otpForm').style.display = 'none';
+    }
+
+    function showOtpForm() {
+        document.getElementById('passwordForm').style.display = 'none';
+        document.getElementById('signupForm').style.display = 'none';
+        document.getElementById('otpForm').style.display = 'block';
+    }
+
+    document.getElementById('toggleSignupLink').addEventListener('click', showSignupForm);
+    document.getElementById('toggleOtpLink').addEventListener('click', showOtpForm);
+    document.getElementById('togglePasswordFromSignup').addEventListener('click', showPasswordForm);
+    document.getElementById('toggleOtpFromSignup').addEventListener('click', showOtpForm);
+    document.getElementById('togglePasswordFromOtp').addEventListener('click', showPasswordForm);
+
+    // Default to password sign in
+    showPasswordForm();
+
+    // Sign-up Form Submission
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const fullName = document.getElementById('signupName').value;
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
+        const confirmPassword = document.getElementById('signupConfirmPassword').value;
+        const phone = document.getElementById('signupPhone').value;
+
+        if (password !== confirmPassword) {
+            alert('Passwords do not match');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: fullName,
+                    email: email,
+                    password: password,
+                    confirm_password: confirmPassword,
+                    phone: phone
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                alert('Account created successfully!');
+                window.location.href = '/app';
+            } else {
+                alert('Error: ' + (data.error || 'Sign up failed'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    });
+
+    // OTP Form Submission
+    document.getElementById('otpForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('otpEmail').value;
+
+        try {
+            const response = await fetch('/api/auth/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message || 'OTP sent successfully');
+                document.getElementById('otpInputDiv').style.display = 'block';
+                document.otpEmail = email;
+            } else {
+                alert('Error: ' + (data.error || 'Failed to send OTP'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    });
+
+    // OTP Verification
+    document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
+        const otp = document.getElementById('otpCode').value;
+        const email = document.otpEmail || document.getElementById('otpEmail').value;
+
+        if (!otp || otp.length !== 6) {
+            alert('Please enter a valid 6-digit OTP');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                alert('Login successful!');
+                window.location.href = '/app';
+            } else {
+                alert('Error: ' + (data.error || 'Invalid OTP'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    });
+
+    // Password Form Submission
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Save token
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                alert('Login successful!');
+                window.location.href = '/app';
+            } else {
+                alert('Error: ' + (data.error || 'Login failed'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-full-width {
+        width: calc(100vw - 48px);
+        max-width: none;
+        margin-left: calc(50% - 50vw + 24px);
+        margin-right: calc(50% - 50vw + 24px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-full-width">
+    <section class="admin-commandbar stack-card">
+        <div>
+            <p class="eyebrow">Admin</p>
+            <h1>Admin Dashboard</h1>
+            <p class="admin-copy">Choose a control card to manage one area at a time.</p>
+        </div>
+
+    </section>
+
+    <section class="admin-launch-grid">
+        <a class="launch-card accent-card" href="/admin/theme">
+            <div class="launch-card-top">
+                <span class="launch-icon">01</span>
+                <span class="launch-tag">Theme</span>
+            </div>
+            <h2>Theme Card</h2>
+            <p>Control shop name, hero text, footer copy, and brand colors from one page.</p>
+            <span class="launch-action">Open Theme Controls</span>
+        </a>
+
+        <a class="launch-card" href="/admin/products">
+            <div class="launch-card-top">
+                <span class="launch-icon">02</span>
+                <span class="launch-tag">Products</span>
+            </div>
+            <h2>Products Card</h2>
+            <p>Add, edit, delete, and upload media for products in a dedicated product workspace.</p>
+            <span class="launch-action">Open Product Manager</span>
+        </a>
+
+        <a class="launch-card" href="/admin/categories">
+            <div class="launch-card-top">
+                <span class="launch-icon">03</span>
+                <span class="launch-tag">Categories</span>
+            </div>
+            <h2>Categories Card</h2>
+            <p>Organize collections with images, edit buttons, and delete actions on one page.</p>
+            <span class="launch-action">Open Category Manager</span>
+        </a>
+
+        <a class="launch-card" href="/admin/support">
+            <div class="launch-card-top">
+                <span class="launch-icon">04</span>
+                <span class="launch-tag">Support</span>
+            </div>
+            <h2>Support Card</h2>
+            <p>View all support tickets and manage customer support contact details.</p>
+            <span class="launch-action">Open Support Manager</span>
+        </a>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block extra_css %}
+<style>
+    .section-block .section-heading {
+        margin: 0 0 22px;
+        text-align: left;
+    }
+
+    .section-block .section-heading h2,
+    .section-block .section-heading p {
+        text-align: left;
+    }
+
+    .section-block#featured .products-grid {
+        justify-content: flex-start;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 280px));
+    }
+
+    .section-block#featured .product-card {
+        margin: 0;
+        max-width: 280px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero-section hero-enhanced">
+    <div class="hero-content">
+        <p class="eyebrow">{{ site_settings.shop_name }}</p>
+        <h1>{{ site_settings.hero_title }}</h1>
+        <p>{{ site_settings.hero_subtitle }}</p>
+    </div>
+</section>
+
+<section class="section-block" id="categories">
+    <div class="section-heading">
+        <h2>Shop by Category</h2>
+    </div>
+    <div class="categories-grid" id="categoriesGrid">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+    </div>
+</section>
+
+<section class="section-block" id="featured">
+    <div class="section-heading">
+        <h2>Featured Top Rated Products</h2>
+    </div>
+    <div class="products-grid" id="featuredProducts">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+    </div>
+</section>
+
+<section class="section-block">
+    <div class="section-heading">
+        <h2>What Makes Us Different</h2>
+    </div>
+    <div class="services-grid">
+        <div class="service-card">
+            <h3>Devotional Craftsmanship</h3>
+            <p>Every design is created with spiritual meaning and careful finishing.</p>
+        </div>
+        <div class="service-card">
+            <h3>Simple Payments</h3>
+            <p>Pay instantly with QR (UPI) or choose Cash on Delivery.</p>
+        </div>
+        <div class="service-card">
+            <h3>Real Human Support</h3>
+            <p>Direct support from our Kuppam team with quick updates.</p>
+        </div>
+        <div class="service-card">
+            <h3>Careful Fulfillment</h3>
+            <p>Secure packaging and reliable delivery across India.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function starText(value) {
+        const rating = Math.max(0, Math.min(5, Number(value || 0)));
+        const full = Math.round(rating);
+        return `${'★'.repeat(full)}${'☆'.repeat(5 - full)}`;
+    }
+
+    function ratingLine(rating, count) {
+        const reviewCount = Number(count || 0);
+        const ratingValue = Number(rating || 0);
+        if (reviewCount <= 0 || ratingValue <= 0) return '';
+        const label = reviewCount === 1 ? 'rating' : 'ratings';
+        return `${starText(ratingValue)} (${reviewCount} ${label})`;
+    }
+
+    // Load categories
+    function loadCategories() {
+        fetch('/api/products/categories')
+            .then(response => response.json())
+            .then(data => {
+                const grid = document.getElementById('categoriesGrid');
+                grid.innerHTML = '';
+                (data.categories || []).forEach(category => {
+                    const card = document.createElement('div');
+                    card.className = 'category-card';
+                    card.innerHTML = `
+                        <a href="/products?category_id=${category.id}">
+                            <div class="category-image">${category.icon || '📦'}</div>
+                            <h3>${category.name}</h3>
+                            <p>${category.description || 'Explore this collection'}</p>
+                        </a>
+                    `;
+                    grid.appendChild(card);
+                });
+            });
+    }
+
+    // Load featured products
+    function loadFeaturedProducts() {
+        fetch('/api/products/?limit=8&sort_by=rating')
+            .then(response => response.json())
+            .then(data => {
+                const grid = document.getElementById('featuredProducts');
+                grid.innerHTML = '';
+                (data.products || []).forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    const productImage = Array.isArray(product.images) && product.images.length ? product.images[0] : '';
+                    const fallbackLabel = (product.name || 'Product').split(' ').slice(0, 2).join(' ');
+                    card.innerHTML = `
+                        <a href="/products/${product.id}" class="product-card-link">
+                            <div class="product-image ${productImage ? 'has-image' : 'no-image'}" ${productImage ? `style="background-image:url('${productImage}'); background-size:cover; background-position:center;"` : ''}>
+                                ${productImage ? '' : `<span>${fallbackLabel}</span>`}
+                            </div>
+                            <div class="product-card-body">
+                                <h3>${product.name}</h3>
+                                ${ratingLine(product.rating, product.total_reviews) ? `<p class="product-rating-line">${ratingLine(product.rating, product.total_reviews)}</p>` : ''}
+                                <div class="price-row">
+                                    <p class="price">₹${product.discount_price || product.price}</p>
+                                    ${product.discount_price ? `<p class="original-price">₹${product.price}</p>` : ''}
+                                </div>
+                                <button class="btn btn-sm product-action-btn" data-product-id="${product.id}" data-add-to-cart-btn onclick="event.preventDefault(); addToCart('${product.id}')">Add to Cart</button>
+                            </div>
+                        </a>
+                    `;
+                    grid.appendChild(card);
+                });
+
+                if (window.updateCartButtonStates) {
+                    window.updateCartButtonStates();
+                }
+            });
+    }
+
+    // Load contact info
+    function loadContactInfo() {
+        fetch('/api/support/contact')
+            .then(response => response.json())
+            .then(data => {
+                if (data.contact_info) {
+                    document.getElementById('footerEmail').textContent = `Email: ${data.contact_info.email}`;
+                    document.getElementById('footerPhone').textContent = `Phone: ${data.contact_info.phone}`;
+                }
+            });
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCategories();
+        loadFeaturedProducts();
+        loadContactInfo();
+    });
+</script>
+{% endblock %}
