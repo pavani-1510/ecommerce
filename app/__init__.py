@@ -3,7 +3,6 @@ Flask Application Factory
 """
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request
-from flask_cors import CORS
 from pathlib import Path
 from werkzeug.utils import secure_filename
 import uuid
@@ -14,6 +13,11 @@ from app.routes.products import products_bp
 from app.routes.orders import orders_bp
 from app.routes.support import support_bp
 from app.utils.auth import admin_required
+
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
 
 
 def create_app(config_name=None):
@@ -27,7 +31,8 @@ def create_app(config_name=None):
     app.config.from_object(config)
     
     # Enable CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    if CORS is not None:
+        CORS(app, resources={r"/api/*": {"origins": "*"}})
     
     # Register blueprints
     app.register_blueprint(auth_bp)
