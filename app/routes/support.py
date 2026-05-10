@@ -217,7 +217,7 @@ def get_faq():
             {
                 'id': '3',
                 'question': 'What payment methods do you accept?',
-                'answer': 'We accept QR Code (UPI) and Cash on Delivery payment methods.'
+                'answer': 'We accept Cash on Delivery payment method.'
             },
             {
                 'id': '4',

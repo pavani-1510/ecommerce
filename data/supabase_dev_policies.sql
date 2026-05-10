@@ -266,5 +266,74 @@ with check (true);
 -- select policyname, schemaname, tablename, roles, cmd, qual, with_check
 -- from pg_policies
 -- where schemaname = 'public'
---   and tablename in ('categories', 'products', 'users', 'otps', 'support_tickets', 'support_messages', 'carts', 'orders', 'order_items', 'payments')
+--   and tablename in ('categories', 'products', 'users', 'otps', 'support_tickets', 'support_messages', 'carts', 'orders', 'order_items', 'payments', 'coupons')
 -- order by tablename, policyname;
+
+-- ========================================
+-- COUPONS TABLE - Discount coupon codes
+-- ========================================
+
+-- Create coupons table if it doesn't exist
+create table if not exists public.coupons (
+    id uuid primary key default gen_random_uuid(),
+    code varchar(50) unique not null,
+    description text,
+    discount_type varchar(20) not null check (discount_type in ('percent', 'flat')),
+    discount_value decimal(10, 2) not null,
+    min_amount decimal(10, 2),
+    max_discount decimal(10, 2),
+    usage_limit integer,
+    usage_count integer default 0,
+    is_active boolean default true,
+    expiry_date timestamp with time zone,
+    created_at timestamp with time zone default now(),
+    updated_at timestamp with time zone default now()
+);
+
+-- Enable RLS on coupons
+alter table public.coupons enable row level security;
+
+-- Grant permissions for reading active coupons (public/anon can view)
+grant select on table public.coupons to anon, authenticated;
+
+-- Grant permissions (critical for RLS)
+grant all on table public.coupons to authenticated;
+grant all on table public.coupons to anon;
+
+-- Policy: Anyone can read coupons
+drop policy if exists coupons_public_read on public.coupons;
+create policy coupons_public_read
+on public.coupons
+for select
+to anon, authenticated
+using (true);
+
+-- Policy: Authenticated users can insert coupons
+drop policy if exists coupons_admin_insert on public.coupons;
+create policy coupons_admin_insert
+on public.coupons
+for insert
+to authenticated
+with check (true);
+
+-- Policy: Authenticated users can update coupons
+drop policy if exists coupons_admin_update on public.coupons;
+create policy coupons_admin_update
+on public.coupons
+for update
+to authenticated
+using (true)
+with check (true);
+
+-- Policy: Authenticated users can delete coupons
+drop policy if exists coupons_admin_delete on public.coupons;
+create policy coupons_admin_delete
+on public.coupons
+for delete
+to authenticated
+using (true);
+
+-- Create indexes for faster queries
+create index if not exists coupons_code_idx on public.coupons(code);
+create index if not exists coupons_is_active_idx on public.coupons(is_active);
+create index if not exists coupons_expiry_idx on public.coupons(expiry_date);

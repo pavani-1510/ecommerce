@@ -6,11 +6,31 @@ import string
 from datetime import datetime, timedelta
 import hashlib
 import hmac
-import jwt
 from functools import wraps
 from flask import request, jsonify, session, g
 from config import get_config
 from app.models import DatabaseOperations, get_user_by_email, get_user_by_id
+
+try:
+    import jwt
+except ImportError:
+    from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+    class _JWTFallback:
+        ExpiredSignatureError = SignatureExpired
+        InvalidTokenError = BadSignature
+
+        @staticmethod
+        def encode(payload, secret, algorithm=None):
+            serializer = URLSafeTimedSerializer(secret, salt='mantra-made-3d-arts-jwt')
+            return serializer.dumps(payload)
+
+        @staticmethod
+        def decode(token, secret, algorithms=None):
+            serializer = URLSafeTimedSerializer(secret, salt='mantra-made-3d-arts-jwt')
+            return serializer.loads(token, max_age=config.JWT_EXPIRATION_HOURS * 3600)
+
+    jwt = _JWTFallback()
 
 config = get_config()
 
@@ -246,8 +266,8 @@ class JWTManager:
         payload = {
             'user_id': user_id,
             'email': email,
-            'iat': datetime.utcnow(),
-            'exp': datetime.utcnow() + timedelta(hours=config.JWT_EXPIRATION_HOURS)
+            'iat': int(datetime.utcnow().timestamp()),
+            'exp': int((datetime.utcnow() + timedelta(hours=config.JWT_EXPIRATION_HOURS)).timestamp())
         }
         return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
     

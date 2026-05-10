@@ -309,7 +309,12 @@ class DatabaseOperations:
     def insert(table: str, data: dict):
         """Insert record"""
         db = Database.get_client()
-        return db.table(table).insert(data).execute().data
+        try:
+            result = db.table(table).insert(data).execute()
+            return result.data if result.data else [data]  # Return input data if no response from Supabase
+        except Exception as e:
+            print(f"ERROR: Supabase insert failed: {str(e)}")
+            raise
     
     @staticmethod
     def update(table: str, data: dict, filters: dict):

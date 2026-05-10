@@ -268,14 +268,21 @@ window.updateCartCount = updateCartCount;
  * Format date
  */
 function formatDate(dateString) {
+    if (!dateString) {
+        return '-';
+    }
+
     const options = {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Asia/Kolkata'
     };
-    return new Date(dateString).toLocaleDateString('en-IN', options);
+
+    return new Intl.DateTimeFormat('en-IN', options).format(new Date(dateString));
 }
 
 /**

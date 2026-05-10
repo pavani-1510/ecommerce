@@ -3,12 +3,35 @@ Shopping Cart and Orders Routes
 """
 from flask import Blueprint, request, jsonify, g
 from app.utils.auth import login_required
-from app.utils.payment import PaymentManager, OrderManager
+from app.utils.payment import PaymentManager, OrderManager, CouponManager
+from app.utils.common import get_utc_now
 from app.utils.support import EmailService
 from app.models import DatabaseOperations, Database, get_user_cart, get_user_orders, get_product_by_id
 from datetime import datetime
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/api')
+
+
+def calculate_cart_subtotal(cart_items: list) -> float:
+    return round(
+        sum(float(item['products']['price']) * int(item['quantity']) for item in cart_items),
+        2
+    )
+
+
+@orders_bp.route('/coupons/validate', methods=['POST'])
+def validate_coupon():
+    """Validate a coupon code for a subtotal."""
+    try:
+        data = request.get_json() or {}
+        coupon_code = data.get('coupon_code')
+        subtotal = float(data.get('subtotal', 0) or 0)
+        result = CouponManager.validate_coupon(coupon_code, subtotal)
+
+        status_code = 200 if result.get('valid') else 400
+        return jsonify(result), status_code
+    except Exception as e:
+        return jsonify({'valid': False, 'error': str(e)}), 500
 
 @orders_bp.route('/cart', methods=['GET'])
 @login_required
@@ -65,7 +88,7 @@ def add_to_cart():
                 'user_id': g.user_id,
                 'product_id': product_id,
                 'quantity': quantity,
-                'added_at': datetime.now().isoformat()
+                'added_at': get_utc_now()
             }
             DatabaseOperations.insert('carts', cart_data)
         
@@ -144,6 +167,7 @@ def create_order():
         billing_address = data.get('billing_address')
         payment_method = data.get('payment_method', 'cod')
         notes = data.get('notes')
+        coupon_code = (data.get('coupon_code') or '').strip()
         
         if not shipping_address:
             return jsonify({'error': 'Shipping address is required'}), 400
@@ -153,6 +177,19 @@ def create_order():
         
         if not cart_items:
             return jsonify({'error': 'Cart is empty'}), 400
+
+        subtotal_amount = calculate_cart_subtotal(cart_items)
+        coupon_result = {'valid': False, 'discount_amount': 0, 'coupon_code': ''}
+        if coupon_code:
+            coupon_result = CouponManager.validate_coupon(coupon_code, subtotal_amount)
+            if not coupon_result.get('valid'):
+                return jsonify({'error': coupon_result.get('message', 'Invalid coupon code')}), 400
+
+        discount_amount = float(coupon_result.get('discount_amount') or 0)
+
+        if coupon_result.get('coupon_code'):
+            coupon_note = f"Coupon applied: {coupon_result['coupon_code']}"
+            notes = f"{notes}\n{coupon_note}" if notes else coupon_note
         
         # Prepare order items
         order_items = []
@@ -165,7 +202,7 @@ def create_order():
         
         # Create order
         success, order = OrderManager.create_order(
-            g.user_id, order_items, shipping_address, billing_address, notes
+            g.user_id, order_items, shipping_address, billing_address, notes, discount_amount=discount_amount
         )
         
         if not success:
@@ -200,7 +237,10 @@ def create_order():
         return jsonify({
             'message': 'Order created successfully',
             'order': order,
-            'payment_method': payment_method
+            'payment_method': payment_method,
+            'subtotal_amount': subtotal_amount,
+            'discount_amount': discount_amount,
+            'coupon_code': coupon_result.get('coupon_code', '')
         }), 201
     
     except Exception as e:
@@ -216,6 +256,7 @@ def buy_now_order():
         product_id = data.get('product_id')
         quantity = int(data.get('quantity', 1))
         payment_method = data.get('payment_method', 'cod')
+        coupon_code = (data.get('coupon_code') or '').strip()
         shipping_address = data.get('shipping_address') or {
             'full_name': g.user.get('full_name') or 'Customer',
             'email': g.user.get('email'),
@@ -241,6 +282,14 @@ def buy_now_order():
             return jsonify({'error': 'Insufficient stock'}), 400
 
         unit_price = float(product.get('discount_price') or product.get('price') or 0)
+        subtotal_amount = round(unit_price * quantity, 2)
+        coupon_result = {'valid': False, 'discount_amount': 0, 'coupon_code': ''}
+        if coupon_code:
+            coupon_result = CouponManager.validate_coupon(coupon_code, subtotal_amount)
+            if not coupon_result.get('valid'):
+                return jsonify({'error': coupon_result.get('message', 'Invalid coupon code')}), 400
+
+        discount_amount = float(coupon_result.get('discount_amount') or 0)
         order_items = [{
             'product_id': product_id,
             'quantity': quantity,
@@ -252,7 +301,8 @@ def buy_now_order():
             order_items,
             shipping_address,
             shipping_address,
-            data.get('notes')
+            data.get('notes'),
+            discount_amount=discount_amount
         )
 
         if not success:
@@ -279,7 +329,10 @@ def buy_now_order():
         return jsonify({
             'message': 'Order created successfully',
             'order': order,
-            'payment_method': payment_method
+            'payment_method': payment_method,
+            'subtotal_amount': subtotal_amount,
+            'discount_amount': discount_amount,
+            'coupon_code': coupon_result.get('coupon_code', '')
         }), 201
 
     except Exception as e:
@@ -327,68 +380,4 @@ def cancel_order(order_id):
         return jsonify({'error': str(e)}), 500
 
 
-@orders_bp.route('/payment/qr-code', methods=['POST'])
-@login_required
-def generate_qr_code():
-    """Generate QR code for payment"""
-    try:
-        data = request.get_json()
-        order_id = data.get('order_id')
-        
-        if not order_id:
-            return jsonify({'error': 'Order ID is required'}), 400
-        
-        order = OrderManager.get_order_details(order_id)
-        
-        if not order or order['user_id'] != g.user_id:
-            return jsonify({'error': 'Order not found'}), 404
-        
-        # Generate QR code
-        qr_code_data = PaymentManager.generate_qr_code(
-            order_id, order['total_amount']
-        )
-        
-        return jsonify({
-            'qr_code': qr_code_data,
-            'order_id': order_id,
-            'amount': order['total_amount'],
-            'currency': 'INR',
-            'message': 'Scan QR code with UPI app to make payment'
-        }), 200
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
-
-@orders_bp.route('/payment/qr-verify', methods=['POST'])
-@login_required
-def verify_qr_payment():
-    """Verify QR code payment"""
-    try:
-        data = request.get_json()
-        order_id = data.get('order_id')
-        transaction_id = data.get('transaction_id')
-        
-        if not all([order_id, transaction_id]):
-            return jsonify({'error': 'Order ID and Transaction ID are required'}), 400
-        
-        order = OrderManager.get_order_details(order_id)
-        if not order or order['user_id'] != g.user_id:
-            return jsonify({'error': 'Order not found'}), 404
-        
-        # Verify payment
-        PaymentManager.verify_qr_payment(order_id, transaction_id)
-        
-        # Update payment status
-        PaymentManager.update_payment_status(order_id, 'completed', transaction_id)
-        
-        # Update order status
-        OrderManager.update_order_status(order_id, 'confirmed')
-        
-        return jsonify({
-            'message': 'Payment verified successfully',
-            'transaction_id': transaction_id
-        }), 200
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500

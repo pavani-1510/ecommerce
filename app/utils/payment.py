@@ -1,59 +1,123 @@
 """
-Payment utilities for QR Code and COD payment methods
+Payment utilities for COD payment methods
 """
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import uuid
-import qrcode
-from io import BytesIO
-import base64
 from config import get_config
 from app.models import DatabaseOperations
+from app.utils.common import get_utc_now
 
 config = get_config()
+
+
+class CouponManager:
+    """Manage coupon rules for checkout discounts - fetched from database."""
+
+    @staticmethod
+    def normalize_coupon_code(coupon_code: str) -> str:
+        return (coupon_code or '').strip().upper()
+
+    @staticmethod
+    def get_coupon_from_db(coupon_code: str) -> dict:
+        """Fetch coupon details from database by code."""
+        try:
+            coupon = DatabaseOperations.select_one('coupons', {
+                'code': coupon_code,
+                'is_active': True
+            })
+            return coupon if coupon else None
+        except Exception:
+            return None
+
+    @classmethod
+    def validate_coupon(cls, coupon_code: str, subtotal: float) -> dict:
+        normalized_code = cls.normalize_coupon_code(coupon_code)
+
+        if not normalized_code:
+            return {
+                'valid': False,
+                'coupon_code': '',
+                'discount_amount': 0,
+                'total_amount': round(float(subtotal or 0), 2),
+                'message': 'Coupon code is required'
+            }
+
+        # Fetch coupon from database
+        coupon = cls.get_coupon_from_db(normalized_code)
+        if not coupon:
+            return {
+                'valid': False,
+                'coupon_code': normalized_code,
+                'discount_amount': 0,
+                'total_amount': round(float(subtotal or 0), 2),
+                'message': 'Invalid or expired coupon code'
+            }
+
+        # Check if coupon has expired
+        if coupon.get('expiry_date'):
+            from datetime import datetime as dt
+            expiry = coupon['expiry_date']
+            if isinstance(expiry, str):
+                expiry = dt.fromisoformat(expiry.replace('Z', '+00:00'))
+            if dt.now(expiry.tzinfo if hasattr(expiry, 'tzinfo') else None) > expiry:
+                return {
+                    'valid': False,
+                    'coupon_code': normalized_code,
+                    'discount_amount': 0,
+                    'total_amount': round(float(subtotal or 0), 2),
+                    'message': 'This coupon has expired'
+                }
+
+        # Check usage limit
+        if coupon.get('usage_limit') and coupon.get('usage_count', 0) >= coupon['usage_limit']:
+            return {
+                'valid': False,
+                'coupon_code': normalized_code,
+                'discount_amount': 0,
+                'total_amount': round(float(subtotal or 0), 2),
+                'message': 'This coupon usage limit has been reached'
+            }
+
+        subtotal_value = float(subtotal or 0)
+        min_amount = float(coupon.get('min_amount') or 0)
+        if subtotal_value < min_amount:
+            return {
+                'valid': False,
+                'coupon_code': normalized_code,
+                'discount_amount': 0,
+                'total_amount': round(subtotal_value, 2),
+                'message': f"This coupon applies on orders above ₹{int(min_amount)}"
+            }
+
+        # Calculate discount based on type
+        discount_type = coupon.get('discount_type', 'percent').lower()
+        if discount_type == 'percent':
+            discount_amount = subtotal_value * (float(coupon.get('discount_value', 0)) / 100.0)
+            max_discount = float(coupon.get('max_discount') or 0)
+            if max_discount > 0:
+                discount_amount = min(discount_amount, max_discount)
+        else:  # flat
+            discount_amount = float(coupon.get('discount_value', 0))
+
+        discount_amount = round(min(discount_amount, subtotal_value), 2)
+        total_amount = round(max(0, subtotal_value - discount_amount), 2)
+
+        return {
+            'valid': True,
+            'coupon_code': normalized_code,
+            'coupon': coupon,
+            'discount_amount': discount_amount,
+            'subtotal_amount': round(subtotal_value, 2),
+            'total_amount': total_amount,
+            'message': f"Coupon {normalized_code} applied successfully"
+        }
 
 class PaymentManager:
     """Manage payment processing"""
     
     PAYMENT_METHODS = {
-        'qr': 'QR Code Payment',
         'cod': 'Cash on Delivery'
     }
-    
-    @staticmethod
-    def generate_qr_code(order_id: str, amount: float) -> dict:
-        """Generate QR code for payment"""
-        try:
-            # Create payment message with order ID and amount
-            payment_message = f"Order:{order_id}|Amount:{amount}"
-            
-            # Generate QR code
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=2,
-            )
-            qr.add_data(payment_message)
-            qr.make(fit=True)
-            
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            # Convert to base64 string
-            img_buffer = BytesIO()
-            img.save(img_buffer, format='PNG')
-            img_str = base64.b64encode(img_buffer.getvalue()).decode()
-            
-            return {
-                'success': True,
-                'qr_code': f"data:image/png;base64,{img_str}",
-                'payment_message': payment_message,
-                'order_id': order_id,
-                'amount': amount
-            }
-        
-        except Exception as e:
-            print(f"Error generating QR code: {str(e)}")
-            return {'success': False, 'error': str(e)}
     
     @staticmethod
     def create_payment_record(order_id: str, amount: float, payment_method: str) -> dict:
@@ -63,8 +127,8 @@ class PaymentManager:
                 'order_id': order_id,
                 'amount': amount,
                 'payment_method': payment_method,
-                'payment_status': 'pending' if payment_method == 'qr' else 'pending',
-                'created_at': datetime.now().isoformat()
+                'payment_status': 'pending',
+                'created_at': get_utc_now()
             }
             
             result = DatabaseOperations.insert('payments', payment_data)
@@ -84,7 +148,7 @@ class PaymentManager:
         try:
             update_data = {
                 'payment_status': status,
-                'updated_at': datetime.now().isoformat()
+                'updated_at': get_utc_now()
             }
             
             if transaction_id:
@@ -106,7 +170,7 @@ class PaymentManager:
                 'amount': total_amount,
                 'payment_method': 'cod',
                 'payment_status': 'pending',
-                'created_at': datetime.now().isoformat()
+                'created_at': get_utc_now()
             }
             
             result = DatabaseOperations.insert('payments', payment_data)
@@ -119,25 +183,6 @@ class PaymentManager:
         
         except Exception as e:
             print(f"Error processing COD: {str(e)}")
-            return {'success': False, 'error': str(e)}
-    
-    @staticmethod
-    def verify_qr_payment(order_id: str, transaction_id: str) -> dict:
-        """Verify QR code payment (manual verification)"""
-        try:
-            result = PaymentManager.update_payment_status(order_id, 'completed', transaction_id)
-            
-            if result:
-                return {
-                    'success': True,
-                    'message': 'Payment verified successfully',
-                    'transaction_id': transaction_id
-                }
-            else:
-                return {'success': False, 'error': 'Failed to verify payment'}
-        
-        except Exception as e:
-            print(f"Error verifying QR payment: {str(e)}")
             return {'success': False, 'error': str(e)}
     
     @staticmethod
@@ -162,24 +207,27 @@ class OrderManager:
     
     @staticmethod
     def create_order(user_id: str, items: list, shipping_address: dict, 
-                    billing_address: dict = None, notes: str = None) -> tuple[bool, dict]:
+                    billing_address: dict = None, notes: str = None, discount_amount: float = 0) -> tuple[bool, dict]:
         """Create new order"""
         try:
             # Calculate total
-            total_amount = sum(item['price'] * item['quantity'] for item in items)
+            subtotal_amount = sum(item['price'] * item['quantity'] for item in items)
+            discount_amount = round(float(discount_amount or 0), 2)
+            total_amount = round(max(0, subtotal_amount - discount_amount), 2)
             
             order_data = {
                 'user_id': user_id,
                 'order_number': OrderManager.generate_order_number(),
                 'total_amount': total_amount,
+                'discount_amount': discount_amount,
                 'payment_method': 'pending',
                 'payment_status': 'pending',
                 'order_status': 'pending',
                 'shipping_address': shipping_address,
                 'billing_address': billing_address or shipping_address,
                 'notes': notes,
-                'created_at': datetime.now().isoformat(),
-                'updated_at': datetime.now().isoformat()
+                'created_at': get_utc_now(),
+                'updated_at': get_utc_now()
             }
             
             result = DatabaseOperations.insert('orders', order_data)
@@ -213,7 +261,7 @@ class OrderManager:
         try:
             DatabaseOperations.update('orders', {
                 'order_status': status,
-                'updated_at': datetime.now().isoformat()
+                'updated_at': get_utc_now()
             }, {'id': order_id})
             return True
         

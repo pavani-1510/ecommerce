@@ -65,6 +65,7 @@ class Product:
             specifications JSONB,
             rating DECIMAL(3, 2) DEFAULT 0,
             total_reviews INTEGER DEFAULT 0,
+            expected_delivery_date DATE,
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT NOW(),
             updated_at TIMESTAMP DEFAULT NOW()
@@ -283,8 +284,33 @@ class SiteSettings:
         """
 
 
+class Coupon:
+    """Discount Coupon model"""
+    TABLE_NAME = 'coupons'
+    
+    @staticmethod
+    def create_table_sql():
+        return """
+        CREATE TABLE IF NOT EXISTS coupons (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            code VARCHAR(50) UNIQUE NOT NULL,
+            description TEXT,
+            discount_type VARCHAR(20) NOT NULL,
+            discount_value DECIMAL(10, 2) NOT NULL,
+            min_amount DECIMAL(10, 2),
+            max_discount DECIMAL(10, 2),
+            usage_limit INTEGER,
+            usage_count INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT TRUE,
+            expiry_date TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+        """
+
+
 # All models to create tables
 ALL_MODELS = [
     User, Category, Product, Cart, Order, OrderItem,
-    Payment, Review, Support, SupportMessage, OTP, ContactInfo, SiteSettings
+    Payment, Review, Support, SupportMessage, OTP, ContactInfo, SiteSettings, Coupon
 ]

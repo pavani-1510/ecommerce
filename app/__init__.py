@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 import uuid
 from config import get_config
 from app.models import Database, DatabaseOperations, get_site_settings, get_all_categories, get_product_by_id, get_user_by_email, SYSTEM_CATEGORIES
+from app.models.models import Coupon
 from app.routes.auth import auth_bp
 from app.routes.products import products_bp
 from app.routes.orders import orders_bp
@@ -59,8 +60,27 @@ def create_app(config_name=None):
                         **category,
                         'created_at': datetime.now().isoformat()
                     })
+            
+            # Initialize coupons table if it doesn't exist
+            try:
+                existing_coupons = DatabaseOperations.select('coupons', {})
+                print("✓ Coupons table verified in Supabase")
+            except Exception as e:
+                # Table doesn't exist, try to create it
+                print("⚠ Coupons table not found, attempting to create...")
+                try:
+                    db_client = Database.get_client()
+                    # Execute raw SQL to create the table
+                    coupon_sql = Coupon.create_table_sql()
+                    # Use Supabase's rpc or raw query if available
+                    # For now, just log that admin should create it manually
+                    print("! Coupons table creation via SQL: Please ensure the coupons table exists in Supabase")
+                    print("! SQL: " + coupon_sql)
+                except Exception as create_err:
+                    print(f"! Could not auto-create coupons table: {str(create_err)}")
+                    print("! Please create the coupons table manually using the SQL above in Supabase SQL editor")
     except Exception as e:
-        print(f"! Category bootstrap skipped: {str(e)}")
+        print(f"! Database bootstrap skipped: {str(e)}")
 
     @app.context_processor
     def inject_site_settings():
@@ -150,6 +170,11 @@ def create_app(config_name=None):
     def admin_support_page():
         """Admin support management page"""
         return render_template('admin_support.html')
+
+    @app.route('/admin/coupons', methods=['GET'])
+    def admin_coupons_page():
+        """Admin coupon management page"""
+        return render_template('admin_coupons.html')
 
     @app.route('/admin', methods=['GET'])
     def admin_dashboard_page():

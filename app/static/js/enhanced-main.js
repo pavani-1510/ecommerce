@@ -400,10 +400,18 @@ function formatPrice(price) {
  * Format date
  */
 function formatDate(date) {
+    if (!date) {
+        return '-';
+    }
+
     return new Intl.DateTimeFormat('en-IN', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Asia/Kolkata'
     }).format(new Date(date));
 }
 

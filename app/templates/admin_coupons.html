@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}Coupons - Mantra Made 3D Arts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-full-width {
+        width: calc(100vw - 48px);
+        max-width: none;
+        margin-left: calc(50% - 50vw + 24px);
+        margin-right: calc(50% - 50vw + 24px);
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(24, 19, 15, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 120;
+        padding: 20px;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-card {
+        width: min(720px, 100%);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 22px 44px rgba(21, 16, 12, 0.32);
+        padding: 1.2rem;
+    }
+
+    .modal-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid #d8c8b5;
+        background: #fff;
+        font-size: 1.1rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .coupon-badge {
+        display: inline-block;
+        background: #fff5ea;
+        color: var(--brand);
+        padding: 0.4rem 0.8rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-right: 0.5rem;
+    }
+
+    .coupon-status {
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .status-active {
+        background: #d4f4d4;
+        color: #2d5c2d;
+    }
+
+    .status-inactive {
+        background: #f4d4d4;
+        color: #5c2d2d;
+    }
+
+    .collection-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 1.5rem;
+        align-items: start;
+        padding: 1rem;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--paper);
+        margin-bottom: 0.75rem;
+    }
+
+    .coupon-details {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .coupon-code {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--brand);
+        font-family: monospace;
+    }
+
+    .coupon-meta {
+        font-size: 0.9rem;
+        color: var(--muted);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-full-width">
+    <section class="admin-commandbar stack-card">
+        <div>
+            <p class="eyebrow">Admin</p>
+            <h1>Coupon Manager</h1>
+            <p class="admin-copy">Create, edit, and manage discount coupons.</p>
+        </div>
+        <div class="admin-hero-actions">
+            <a class="button secondary" href="/admin">Back to Home</a>
+            <button type="button" class="button primary" id="addCouponTopBtn">Add Coupon</button>
+        </div>
+    </section>
+
+    <div>
+        <article class="stack-card admin-panel admin-form-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Coupons</p>
+                    <h2>Active discount codes</h2>
+                </div>
+                <p class="section-note">Select a coupon to edit or delete it.</p>
+            </div>
+
+            <div class="admin-collection" id="couponList"></div>
+        </article>
+
+        <div id="couponModal" class="modal-overlay" aria-hidden="true">
+            <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="couponModalTitle">
+                <div class="modal-head">
+                    <div>
+                        <p class="eyebrow">Editor</p>
+                        <h2 id="couponModalTitle">Add or edit a coupon</h2>
+                    </div>
+                    <button type="button" class="modal-close" id="closeCouponModalBtn" aria-label="Close">X</button>
+                </div>
+
+                <form id="couponForm" class="admin-form">
+                    <input type="hidden" id="coupon_id">
+                    
+                    <div class="field">
+                        <label for="couponCode">Coupon Code</label>
+                        <input id="couponCode" type="text" required placeholder="e.g. WELCOME10" style="text-transform: uppercase;">
+                    </div>
+
+                    <div class="field">
+                        <label for="couponDescription">Description</label>
+                        <input id="couponDescription" type="text" placeholder="e.g. 10% off on orders above ₹500">
+                    </div>
+
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="discountType">Discount Type</label>
+                            <select id="discountType" required>
+                                <option value="percent">Percentage (%)</option>
+                                <option value="flat">Flat Amount (₹)</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="discountValue">Discount Value</label>
+                            <input id="discountValue" type="number" step="0.01" required placeholder="10 or 100">
+                        </div>
+                    </div>
+
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="minAmount">Min Order Amount (₹)</label>
+                            <input id="minAmount" type="number" step="0.01" placeholder="500">
+                        </div>
+                        <div class="field">
+                            <label for="maxDiscount">Max Discount (₹)</label>
+                            <input id="maxDiscount" type="number" step="0.01" placeholder="Leave blank for no limit">
+                        </div>
+                    </div>
+
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="usageLimit">Usage Limit</label>
+                            <input id="usageLimit" type="number" min="0" placeholder="Leave blank for unlimited">
+                        </div>
+                        <div class="field">
+                            <label for="expiryDate">Expiry Date</label>
+                            <input id="expiryDate" type="datetime-local">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label style="display: flex; gap: 0.5rem; align-items: center; cursor: pointer;">
+                            <input id="isActive" type="checkbox" checked>
+                            <span>Active</span>
+                        </label>
+                    </div>
+
+                    <div class="button-row wrap">
+                        <button type="submit" class="button primary" id="couponSubmitBtn">Save Coupon</button>
+                        <button type="button" class="button secondary" id="resetCouponBtn">Clear</button>
+                        <button type="button" class="button secondary" id="cancelCouponModalBtn">Close</button>
+                    </div>
+                </form>
+
+                <div id="adminStatus" class="admin-status"></div>
+            </article>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const state = { coupons: [] };
+
+function openCouponModal() {
+    const modal = document.getElementById('couponModal');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeCouponModal() {
+    const modal = document.getElementById('couponModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    resetCouponForm();
+}
+
+async function loadCoupons() {
+    try {
+        const response = await apiRequest('/products/coupons/admin');
+        if (!response) return;
+        const data = await response.json();
+        state.coupons = data.coupons || [];
+        renderCoupons();
+    } catch (err) {
+        showNotification('Failed to load coupons', 'error');
+    }
+}
+
+function formatDiscountDisplay(coupon) {
+    if (coupon.discount_type === 'percent') {
+        return `${coupon.discount_value}% off`;
+    } else {
+        return `₹${Number(coupon.discount_value).toFixed(0)} off`;
+    }
+}
+
+function renderCoupons() {
+    const list = document.getElementById('couponList');
+    if (!state.coupons.length) {
+        list.innerHTML = '<div class="empty-state">No coupons yet. Create your first coupon!</div>';
+        return;
+    }
+
+    list.innerHTML = state.coupons.map(coupon => {
+        const minAmount = coupon.min_amount ? `Min: ₹${coupon.min_amount}` : 'No minimum';
+        const usageInfo = coupon.usage_limit ? `${coupon.usage_count || 0}/${coupon.usage_limit} used` : 'Unlimited uses';
+        const expiryInfo = coupon.expiry_date ? new Date(coupon.expiry_date).toLocaleDateString() : 'No expiry';
+        
+        return `
+            <div class="collection-item">
+                <div class="coupon-details">
+                    <div class="coupon-code">${coupon.code}</div>
+                    <div>
+                        <span class="coupon-badge">${formatDiscountDisplay(coupon)}</span>
+                        <span class="coupon-status ${coupon.is_active ? 'status-active' : 'status-inactive'}">
+                            ${coupon.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                    <div class="coupon-meta">
+                        ${coupon.description || 'No description'}
+                    </div>
+                    <div class="coupon-meta">
+                        ${minAmount} • ${usageInfo} • Expires: ${expiryInfo}
+                    </div>
+                </div>
+                <div class="button-row compact-buttons">
+                    <button type="button" class="button-link" data-edit="${coupon.id}">Edit</button>
+                    <button type="button" class="button-link danger-link" data-delete="${coupon.id}">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-edit]').forEach(button => {
+        button.addEventListener('click', () => {
+            const coupon = state.coupons.find(item => item.id === button.dataset.edit);
+            if (!coupon) return;
+            
+            document.getElementById('coupon_id').value = coupon.id;
+            document.getElementById('couponCode').value = coupon.code;
+            document.getElementById('couponDescription').value = coupon.description || '';
+            document.getElementById('discountType').value = coupon.discount_type;
+            document.getElementById('discountValue').value = coupon.discount_value;
+            document.getElementById('minAmount').value = coupon.min_amount || '';
+            document.getElementById('maxDiscount').value = coupon.max_discount || '';
+            document.getElementById('usageLimit').value = coupon.usage_limit || '';
+            document.getElementById('isActive').checked = coupon.is_active;
+            
+            if (coupon.expiry_date) {
+                const date = new Date(coupon.expiry_date);
+                document.getElementById('expiryDate').value = date.toISOString().slice(0, 16);
+            }
+            
+            document.getElementById('couponSubmitBtn').textContent = 'Update Coupon';
+            document.getElementById('couponModalTitle').textContent = 'Edit Coupon';
+            openCouponModal();
+        });
+    });
+
+    list.querySelectorAll('[data-delete]').forEach(button => {
+        button.addEventListener('click', () => deleteCoupon(button.dataset.delete));
+    });
+}
+
+function resetCouponForm() {
+    document.getElementById('couponForm').reset();
+    document.getElementById('coupon_id').value = '';
+    document.getElementById('couponSubmitBtn').textContent = 'Save Coupon';
+    document.getElementById('couponModalTitle').textContent = 'Add a New Coupon';
+    document.getElementById('isActive').checked = true;
+}
+
+async function saveCoupon(event) {
+    event.preventDefault();
+    const couponId = document.getElementById('coupon_id').value;
+    const code = document.getElementById('couponCode').value.toUpperCase();
+    const method = couponId ? 'PUT' : 'POST';
+
+    const payload = {
+        id: couponId || undefined,
+        code,
+        description: document.getElementById('couponDescription').value,
+        discount_type: document.getElementById('discountType').value,
+        discount_value: parseFloat(document.getElementById('discountValue').value),
+        min_amount: document.getElementById('minAmount').value ? parseFloat(document.getElementById('minAmount').value) : null,
+        max_discount: document.getElementById('maxDiscount').value ? parseFloat(document.getElementById('maxDiscount').value) : null,
+        usage_limit: document.getElementById('usageLimit').value ? parseInt(document.getElementById('usageLimit').value) : null,
+        expiry_date: document.getElementById('expiryDate').value ? new Date(document.getElementById('expiryDate').value).toISOString() : null,
+        is_active: document.getElementById('isActive').checked
+    };
+
+    try {
+        const response = await apiRequest('/products/coupons/admin', {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response) return;
+        const data = await response.json();
+
+        if (response.ok) {
+            showNotification(data.message || 'Coupon saved successfully', 'success');
+            closeCouponModal();
+            loadCoupons();
+        } else {
+            showNotification(data.error || 'Failed to save coupon', 'error');
+        }
+    } catch (err) {
+        showNotification('Error saving coupon', 'error');
+    }
+}
+
+async function deleteCoupon(id) {
+    if (!confirm('Delete this coupon? This action cannot be undone.')) return;
+
+    try {
+        const response = await apiRequest(`/products/coupons/admin/${id}`, { method: 'DELETE' });
+        if (!response) return;
+        const data = await response.json();
+
+        if (response.ok) {
+            showNotification('Coupon deleted successfully', 'success');
+            loadCoupons();
+        } else {
+            showNotification(data.error || 'Failed to delete coupon', 'error');
+        }
+    } catch (err) {
+        showNotification('Error deleting coupon', 'error');
+    }
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('addCouponTopBtn').addEventListener('click', () => {
+        resetCouponForm();
+        openCouponModal();
+    });
+
+    document.getElementById('closeCouponModalBtn').addEventListener('click', closeCouponModal);
+    document.getElementById('cancelCouponModalBtn').addEventListener('click', closeCouponModal);
+    document.getElementById('resetCouponBtn').addEventListener('click', resetCouponForm);
+    document.getElementById('couponForm').addEventListener('submit', saveCoupon);
+
+    // Initial load
+    loadCoupons();
+});
+</script>
+{% endblock %}

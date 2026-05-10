@@ -146,6 +146,27 @@ a {
     color: #ffb788;
 }
 
+.search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 237, 213, 0.3);
+    background: rgba(179, 79, 50, 0.2);
+    color: #ffb788;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+}
+
+.search-btn:hover {
+    background: rgba(179, 79, 50, 0.35);
+    color: #ffd8bf;
+    border-color: rgba(255, 237, 213, 0.5);
+}
+
 .admin-controls-link {
     display: inline-flex;
     align-items: center;
@@ -974,17 +995,37 @@ a {
     border-radius: 999px;
     font-weight: 600;
     border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(179, 79, 50, 0.15);
 }
 
 .button.primary {
     background: linear-gradient(135deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 78%, white) 100%);
     color: #fff;
+    box-shadow: 0 8px 24px rgba(179, 79, 50, 0.25);
+}
+
+.button.primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(179, 79, 50, 0.35);
 }
 
 .button.secondary {
     background: rgba(255, 255, 255, 0.86);
     border-color: #dbc7b0;
     color: #43362b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.button.secondary:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.button:active {
+    transform: translateY(0);
 }
 
 .admin-form {

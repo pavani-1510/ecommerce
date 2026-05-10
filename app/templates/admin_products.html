@@ -123,6 +123,10 @@
                         </div>
                     </div>
                     <div class="field">
+                        <label for="expectedDeliveryDate">Expected Delivery Date (default: 2 weeks)</label>
+                        <input type="date" id="expectedDeliveryDate" placeholder="Leave blank for 2 weeks from today">
+                    </div>
+                    <div class="field">
                         <label for="image_file">Product Image</label>
                         <input id="image_file" type="file" accept="image/*">
                     </div>
@@ -152,6 +156,12 @@ function openProductModal() {
     const modal = document.getElementById('productModal');
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
+}
+
+function getDefaultDeliveryDate() {
+    const date = new Date();
+    date.setDate(date.getDate() + 14);
+    return date.toISOString().split('T')[0];
 }
 
 function closeProductModal() {
@@ -227,6 +237,7 @@ function renderProducts() {
             document.getElementById('discountPrice').value = product.discount_price || '';
             document.getElementById('stockQuantity').value = product.stock_quantity || 0;
             document.getElementById('description').value = product.description || '';
+            document.getElementById('expectedDeliveryDate').value = product.expected_delivery_date || '';
             document.getElementById('productSubmitBtn').textContent = 'Update Product';
             openProductModal();
         });
@@ -253,6 +264,7 @@ function resetProductForm() {
     document.getElementById('productForm').reset();
     document.getElementById('product_id').value = '';
     document.getElementById('productSubmitBtn').textContent = 'Publish Product';
+    document.getElementById('expectedDeliveryDate').value = getDefaultDeliveryDate();
 }
 
 document.getElementById('resetProductBtn').addEventListener('click', resetProductForm);
@@ -281,6 +293,8 @@ document.getElementById('productForm').addEventListener('submit', async (event) 
     formData.append('discount_price', document.getElementById('discountPrice').value);
     formData.append('stock_quantity', document.getElementById('stockQuantity').value);
     formData.append('description', document.getElementById('description').value);
+    const expectedDeliveryDate = document.getElementById('expectedDeliveryDate').value || getDefaultDeliveryDate();
+    formData.append('expected_delivery_date', expectedDeliveryDate);
     const file = document.getElementById('image_file').files[0];
     if (file) formData.append('image_file', file);
 

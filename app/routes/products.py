@@ -4,6 +4,7 @@ Product Routes
 from flask import Blueprint, request, jsonify
 from app.models import DatabaseOperations, Database, get_products_by_category, get_all_categories, get_product_by_id, get_product_reviews
 from app.utils.auth import login_required, admin_required
+from app.utils.common import get_utc_now
 from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
@@ -106,7 +107,7 @@ def manage_category():
                 'slug': slug,
                 'description': description,
                 'image_url': image_url,
-                'created_at': datetime.now().isoformat()
+                'created_at': get_utc_now()
             }
 
             result = DatabaseOperations.insert('categories', category_data)
@@ -131,7 +132,7 @@ def manage_category():
             'slug': slug,
             'description': description,
             'image_url': image_url or existing.get('image_url'),
-            'updated_at': datetime.now().isoformat()
+            'updated_at': get_utc_now()
         }
         DatabaseOperations.update('categories', update_data, {'id': category_id})
 
@@ -211,7 +212,16 @@ def list_products():
         query = query.eq('is_active', True)
         
         # Order and pagination
-        query = query.order(sort_by, desc=True).range((page-1)*limit, page*limit-1)
+        if sort_by == 'price_low':
+            query = query.order('price', desc=False)
+        elif sort_by == 'price_high':
+            query = query.order('price', desc=True)
+        elif sort_by == 'name':
+            query = query.order('name', desc=False)
+        else:
+            query = query.order('rating', desc=True)
+
+        query = query.range((page-1)*limit, page*limit-1)
         
         result = query.execute()
         products = result.data or []
@@ -223,6 +233,12 @@ def list_products():
                 key=lambda item: (float(item.get('rating') or 0), int(item.get('total_reviews') or 0)),
                 reverse=True
             )
+        elif sort_by == 'price_low':
+            products = sorted(products, key=lambda item: float(item.get('discount_price') or item.get('price') or 0))
+        elif sort_by == 'price_high':
+            products = sorted(products, key=lambda item: float(item.get('discount_price') or item.get('price') or 0), reverse=True)
+        elif sort_by == 'name':
+            products = sorted(products, key=lambda item: (item.get('name') or '').lower())
         
         return jsonify({
             'products': products,
@@ -343,7 +359,7 @@ def add_review(product_id):
             'user_id': g.user_id,
             'rating': rating,
             'review_text': review_text,
-            'created_at': datetime.now().isoformat()
+            'created_at': get_utc_now()
         }
         
         result = DatabaseOperations.insert('reviews', review_data)
@@ -439,6 +455,10 @@ def create_product():
             if missing_fields:
                 return jsonify({'error': f"Missing fields: {', '.join(missing_fields)}"}), 400
 
+            category = DatabaseOperations.select_one('categories', {'id': data.get('category_id')})
+            if not category:
+                return jsonify({'error': 'Select a valid category'}), 400
+
             product_data = {
                 'id': str(uuid.uuid4()),
                 'category_id': data.get('category_id'),
@@ -449,10 +469,11 @@ def create_product():
                 'stock_quantity': int(data.get('stock_quantity', 0)),
                 'images': [uploaded_image] if uploaded_image else data.get('images'),
                 'specifications': data.get('specifications'),
+                'expected_delivery_date': data.get('expected_delivery_date'),
                 'rating': 0,
                 'total_reviews': 0,
                 'is_active': True,
-                'created_at': datetime.now().isoformat()
+                'created_at': get_utc_now()
             }
 
             result = DatabaseOperations.insert('products', product_data)
@@ -470,8 +491,12 @@ def create_product():
         if not existing:
             return jsonify({'error': 'Product not found'}), 404
 
+        category_id = data.get('category_id', existing.get('category_id'))
+        if category_id and not DatabaseOperations.select_one('categories', {'id': category_id}):
+            return jsonify({'error': 'Select a valid category'}), 400
+
         update_data = {
-            'category_id': data.get('category_id', existing.get('category_id')),
+            'category_id': category_id,
             'name': data.get('name', existing.get('name')),
             'description': data.get('description', existing.get('description')),
             'price': float(data.get('price', existing.get('price', 0))),
@@ -479,7 +504,8 @@ def create_product():
             'stock_quantity': int(data.get('stock_quantity', existing.get('stock_quantity', 0))),
             'images': [uploaded_image] if uploaded_image else data.get('images', existing.get('images')),
             'specifications': data.get('specifications', existing.get('specifications')),
-            'updated_at': datetime.now().isoformat()
+            'expected_delivery_date': data.get('expected_delivery_date', existing.get('expected_delivery_date')),
+            'updated_at': get_utc_now()
         }
 
         DatabaseOperations.update('products', update_data, {'id': product_id})
@@ -505,6 +531,120 @@ def delete_product(product_id):
 
         DatabaseOperations.delete('products', {'id': product_id})
         return jsonify({'message': 'Product deleted successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ===== COUPON MANAGEMENT ROUTES (Admin) =====
+
+@products_bp.route('/coupons/admin', methods=['GET'])
+@login_required
+@admin_required
+def list_coupons():
+    """Get all coupons for admin dashboard"""
+    try:
+        coupons = DatabaseOperations.select('coupons', {})
+        return jsonify({
+            'coupons': coupons or [],
+            'total': len(coupons) if coupons else 0
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@products_bp.route('/coupons/admin', methods=['POST', 'PUT'])
+@login_required
+@admin_required
+def manage_coupon():
+    """Create or update a coupon"""
+    try:
+        data = request.get_json(silent=True) or {}
+        coupon_id = data.get('id')
+        code = (data.get('code') or '').strip().upper()
+        description = data.get('description', '').strip()
+        discount_type = (data.get('discount_type') or 'percent').lower()
+        discount_value = float(data.get('discount_value') or 0)
+        min_amount = float(data.get('min_amount') or 0) if data.get('min_amount') else None
+        max_discount = float(data.get('max_discount') or 0) if data.get('max_discount') else None
+        usage_limit = int(data.get('usage_limit') or 0) if data.get('usage_limit') else None
+        expiry_date = data.get('expiry_date')  # ISO format: "2025-12-31T23:59:59"
+        is_active = data.get('is_active', True)
+
+        # Validation
+        if not code or len(code) < 3:
+            return jsonify({'error': 'Coupon code must be at least 3 characters'}), 400
+        if discount_value <= 0:
+            return jsonify({'error': 'Discount value must be greater than 0'}), 400
+        if discount_type not in ['percent', 'flat']:
+            return jsonify({'error': 'Discount type must be "percent" or "flat"'}), 400
+
+        coupon_data = {
+            'code': code,
+            'description': description,
+            'discount_type': discount_type,
+            'discount_value': discount_value,
+            'min_amount': min_amount,
+            'max_discount': max_discount,
+            'usage_limit': usage_limit,
+            'is_active': is_active,
+            'expiry_date': expiry_date,
+            'updated_at': get_utc_now()
+        }
+
+        if request.method == 'POST':
+            # Check if code already exists
+            existing = DatabaseOperations.select_one('coupons', {'code': code})
+            if existing:
+                return jsonify({'error': 'Coupon code already exists'}), 400
+
+            coupon_data['created_at'] = get_utc_now()
+            coupon_data['usage_count'] = 0
+            
+            result = DatabaseOperations.insert('coupons', coupon_data)
+            
+            verify = DatabaseOperations.select_one('coupons', {'code': code})
+            
+            if verify:
+                print(f"✓ Coupon {code} successfully saved to database")
+                return jsonify({
+                    'message': 'Coupon created successfully',
+                    'coupon': verify
+                }), 201
+            else:
+                print(f"✗ ERROR: Coupon {code} not found in database after insert!")
+                return jsonify({
+                    'error': 'Coupon creation failed - not saved to database. Check RLS policies in Supabase.'
+                }), 500
+
+        else:  # PUT
+            if not coupon_id:
+                return jsonify({'error': 'Coupon ID required for update'}), 400
+
+            # Check if new code already exists (excluding current coupon)
+            existing = DatabaseOperations.select_one('coupons', {'code': code})
+            if existing and existing.get('id') != coupon_id:
+                return jsonify({'error': 'Coupon code already exists'}), 400
+
+            result = DatabaseOperations.update('coupons', coupon_data, {'id': coupon_id})
+            return jsonify({'message': 'Coupon updated successfully', 'coupon': result}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@products_bp.route('/coupons/admin/<coupon_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_coupon(coupon_id):
+    """Delete a coupon"""
+    try:
+        coupon = DatabaseOperations.select_one('coupons', {'id': coupon_id})
+        if not coupon:
+            return jsonify({'error': 'Coupon not found'}), 404
+
+        DatabaseOperations.delete('coupons', {'id': coupon_id})
+        return jsonify({'message': 'Coupon deleted successfully'}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
