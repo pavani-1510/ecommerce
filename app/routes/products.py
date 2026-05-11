@@ -504,6 +504,8 @@ def create_product():
                 'created_at': get_utc_now()
             }
 
+            # Debug logging for troubleshooting missing fields
+            print(f"DEBUG: Creating product payload (id={product_data.get('id')}), description repr: {repr(product_data.get('description'))}")
             try:
                 result = DatabaseOperations.insert('products', product_data)
             except Exception as insert_error:
@@ -514,6 +516,8 @@ def create_product():
                     result = DatabaseOperations.insert('products', product_data)
                 else:
                     raise
+
+            print(f"DEBUG: Insert result for product id={product_data.get('id')}: {result}")
 
             return jsonify({
                 'message': 'Product created successfully',
@@ -545,6 +549,8 @@ def create_product():
             'updated_at': get_utc_now()
         }
 
+        # Debug logging for update payload
+        print(f"DEBUG: Updating product id={product_id}, description repr: {repr(update_data.get('description'))}")
         try:
             DatabaseOperations.update('products', update_data, {'id': product_id})
         except Exception as update_error:
