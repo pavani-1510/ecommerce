@@ -343,8 +343,8 @@ async function loadProducts() {
                 <div class="product-card-body">
                     <h3>${product.name}</h3>
                     <p>${product.description || ''}</p>
-                    <p class="price">₹${product.discount_price || product.price}</p>
-                    ${product.discount_price ? `<p class="original-price">₹${product.price}</p>` : ''}
+                    <p class="price">Current Price: ₹${product.discount_price || product.price}</p>
+                    <p class="original-price">MRP Price: ₹${product.price}</p>
                 </div>
             </a>
             <button class="btn btn-sm product-action-btn" data-product-id="${product.id}" data-add-to-cart-btn onclick="addToCart('${product.id}')">Add to Cart</button>

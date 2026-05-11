@@ -108,13 +108,13 @@
                             <input type="text" id="name" required placeholder="e.g. Mandala Lamp">
                         </div>
                         <div class="field">
-                            <label for="price">Price</label>
+                            <label for="price">MRP Price</label>
                             <input type="number" id="price" step="0.01" required placeholder="799">
                         </div>
                     </div>
                     <div class="field-grid">
                         <div class="field">
-                            <label for="discountPrice">Discount Price</label>
+                            <label for="discountPrice">Current Price</label>
                             <input type="number" id="discountPrice" step="0.01" placeholder="699">
                         </div>
                         <div class="field">
@@ -127,8 +127,8 @@
                         <input type="date" id="expectedDeliveryDate" placeholder="Leave blank for 2 weeks from today">
                     </div>
                     <div class="field">
-                        <label for="image_file">Product Image</label>
-                        <input id="image_file" type="file" accept="image/*">
+                        <label for="image_files">Product Images (multiple)</label>
+                        <input id="image_files" type="file" accept="image/*" multiple>
                     </div>
                     <div class="field">
                         <label for="description">Description</label>
@@ -295,8 +295,10 @@ document.getElementById('productForm').addEventListener('submit', async (event) 
     formData.append('description', document.getElementById('description').value);
     const expectedDeliveryDate = document.getElementById('expectedDeliveryDate').value || getDefaultDeliveryDate();
     formData.append('expected_delivery_date', expectedDeliveryDate);
-    const file = document.getElementById('image_file').files[0];
-    if (file) formData.append('image_file', file);
+    const files = document.getElementById('image_files').files;
+    for (const file of files) {
+        formData.append('image_files', file);
+    }
 
     const response = await apiRequest('/products/admin', {
         method: productId ? 'PUT' : 'POST',

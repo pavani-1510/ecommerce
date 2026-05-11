@@ -25,10 +25,38 @@
         gap: 1rem;
     }
 
+    .product-media {
+        display: grid;
+        gap: 0.7rem;
+    }
+
     .product-detail-image {
         border-radius: 14px;
         min-height: 320px;
         background-color: #e9d7c1;
+    }
+
+    .product-thumbs {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.1rem;
+    }
+
+    .product-thumb {
+        border: 1px solid #d8c8b5;
+        border-radius: 10px;
+        width: 62px;
+        height: 62px;
+        background-size: cover;
+        background-position: center;
+        cursor: pointer;
+        flex: 0 0 auto;
+    }
+
+    .product-thumb.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(32, 113, 103, 0.2);
     }
 
     .detail-price {
@@ -214,6 +242,13 @@ function firstImage(product) {
         : 'https://via.placeholder.com/900x700?text=Mantra+Made+3D+Arts';
 }
 
+function getProductImages(product) {
+    if (Array.isArray(product?.images) && product.images.length) {
+        return product.images;
+    }
+    return [firstImage(product)];
+}
+
 function renderReviewList(reviews) {
     const list = document.getElementById('reviewList');
     if (!reviews || !reviews.length) {
@@ -243,8 +278,8 @@ function renderSimilarProducts(products) {
                 <div class="product-image" style="background-image:url('${firstImage(product)}'); background-size:cover; background-position:center;"></div>
                 <h3>${product.name}</h3>
                 ${ratingLine(product.rating, product.total_reviews) ? `<p class="product-rating-line">${ratingLine(product.rating, product.total_reviews)}</p>` : ''}
-                <p class="price">₹${product.discount_price || product.price}</p>
-                ${product.discount_price ? `<p class="original-price">₹${product.price}</p>` : ''}
+                <p class="price">Current Price: ₹${product.discount_price || product.price}</p>
+                <p class="original-price">MRP Price: ₹${product.price}</p>
                 <button class="btn btn-sm" onclick="event.preventDefault(); addToCart('${product.id}')">Add to Cart</button>
             </a>
         </article>
@@ -391,7 +426,8 @@ async function loadProductDetail() {
         }
 
         const product = data.product;
-        const productImage = firstImage(product);
+        const productImages = getProductImages(product);
+        const productImage = productImages[0];
         activeProductId = productId;
         activeCategoryId = product.category_id || null;
         firstLoadedReviews = product.reviews || [];
@@ -400,13 +436,18 @@ async function loadProductDetail() {
         const numericRating = Number(product.average_rating || product.rating || 0);
 
         container.innerHTML = `
-            <div class="product-detail-image" style="background-image:url('${productImage}'); background-size:cover; background-position:center;"></div>
+            <div class="product-media">
+                <div id="mainProductImage" class="product-detail-image" style="background-image:url('${productImage}'); background-size:cover; background-position:center;"></div>
+                <div class="product-thumbs">
+                    ${productImages.map((image, index) => `<button type="button" class="product-thumb ${index === 0 ? 'active' : ''}" data-product-image="${image}" style="background-image:url('${image}')" aria-label="View image ${index + 1}"></button>`).join('')}
+                </div>
+            </div>
             <div class="product-detail-content">
                 <p class="eyebrow">${product.categories?.name || 'Product'}</p>
                 <h1>${product.name}</h1>
-                <p class="detail-price">₹${product.discount_price || product.price}</p>
+                <p class="detail-price">Current Price: ₹${product.discount_price || product.price}</p>
                 ${hasPositiveRating ? `<p class="star-row">${ratingSummary}</p>` : ''}
-                ${product.discount_price ? `<p class="original-price">₹${product.price}</p>` : ''}
+                <p class="original-price">MRP Price: ₹${product.price}</p>
                 <p class="detail-copy">${product.description || ''}</p>
                 <div class="detail-actions">
                     <button class="btn btn-primary" onclick="addToCart('${product.id}')">Add to Cart</button>
@@ -425,6 +466,15 @@ async function loadProductDetail() {
         if (toggleButton) {
             toggleButton.addEventListener('click', openReviewsPanel);
         }
+
+        const mainImage = document.getElementById('mainProductImage');
+        container.querySelectorAll('[data-product-image]').forEach((thumb) => {
+            thumb.addEventListener('click', () => {
+                mainImage.style.backgroundImage = `url('${thumb.dataset.productImage}')`;
+                container.querySelectorAll('.product-thumb').forEach((item) => item.classList.remove('active'));
+                thumb.classList.add('active');
+            });
+        });
 
         await loadSimilarProducts(productId, activeCategoryId);
     } catch (error) {

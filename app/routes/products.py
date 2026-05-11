@@ -80,6 +80,24 @@ def normalize_product_images(product: dict) -> dict:
     return product
 
 
+def normalize_images_input(images_value) -> list:
+    """Normalize incoming images payload to a list of URLs/paths."""
+    if isinstance(images_value, list):
+        return [img for img in images_value if img]
+
+    if isinstance(images_value, str):
+        try:
+            parsed = json.loads(images_value)
+            if isinstance(parsed, list):
+                return [img for img in parsed if img]
+        except Exception:
+            return [images_value] if images_value else []
+
+        return [images_value] if images_value else []
+
+    return []
+
+
 @products_bp.route('/categories/admin', methods=['POST', 'PUT'])
 @login_required
 @admin_required
@@ -445,8 +463,18 @@ def create_product():
             return jsonify({'error': 'Admin access required'}), 403
 
         data = request.form.to_dict() if request.form else (request.get_json(silent=True) or {})
-        image_file = request.files.get('image_file')
-        uploaded_image = save_uploaded_media(image_file, 'products') if image_file and image_file.filename else ''
+        image_files = request.files.getlist('image_files')
+        uploaded_images = [
+            save_uploaded_media(file, 'products')
+            for file in image_files
+            if file and getattr(file, 'filename', '')
+        ]
+
+        # Backward compatibility for older single-file input.
+        if not uploaded_images:
+            image_file = request.files.get('image_file')
+            if image_file and image_file.filename:
+                uploaded_images = [save_uploaded_media(image_file, 'products')]
 
         if request.method == 'POST':
             required_fields = ['category_id', 'name', 'price']
@@ -467,7 +495,7 @@ def create_product():
                 'price': float(data.get('price')),
                 'discount_price': float(data['discount_price']) if data.get('discount_price') not in [None, ''] else None,
                 'stock_quantity': int(data.get('stock_quantity', 0)),
-                'images': [uploaded_image] if uploaded_image else data.get('images'),
+                'images': uploaded_images if uploaded_images else normalize_images_input(data.get('images')),
                 'specifications': data.get('specifications'),
                 'expected_delivery_date': data.get('expected_delivery_date'),
                 'rating': 0,
@@ -476,7 +504,16 @@ def create_product():
                 'created_at': get_utc_now()
             }
 
-            result = DatabaseOperations.insert('products', product_data)
+            try:
+                result = DatabaseOperations.insert('products', product_data)
+            except Exception as insert_error:
+                error_text = str(insert_error).lower()
+                if 'expected_delivery_date' in error_text and ('column' in error_text or 'schema' in error_text):
+                    # Backward compatibility for databases that have not yet added this column.
+                    product_data.pop('expected_delivery_date', None)
+                    result = DatabaseOperations.insert('products', product_data)
+                else:
+                    raise
 
             return jsonify({
                 'message': 'Product created successfully',
@@ -502,13 +539,21 @@ def create_product():
             'price': float(data.get('price', existing.get('price', 0))),
             'discount_price': float(data['discount_price']) if data.get('discount_price') not in [None, ''] else None,
             'stock_quantity': int(data.get('stock_quantity', existing.get('stock_quantity', 0))),
-            'images': [uploaded_image] if uploaded_image else data.get('images', existing.get('images')),
+            'images': uploaded_images if uploaded_images else normalize_images_input(data.get('images', existing.get('images'))),
             'specifications': data.get('specifications', existing.get('specifications')),
             'expected_delivery_date': data.get('expected_delivery_date', existing.get('expected_delivery_date')),
             'updated_at': get_utc_now()
         }
 
-        DatabaseOperations.update('products', update_data, {'id': product_id})
+        try:
+            DatabaseOperations.update('products', update_data, {'id': product_id})
+        except Exception as update_error:
+            error_text = str(update_error).lower()
+            if 'expected_delivery_date' in error_text and ('column' in error_text or 'schema' in error_text):
+                update_data.pop('expected_delivery_date', None)
+                DatabaseOperations.update('products', update_data, {'id': product_id})
+            else:
+                raise
 
         return jsonify({
             'message': 'Product updated successfully',

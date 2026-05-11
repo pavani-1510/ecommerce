@@ -7,9 +7,10 @@ import json
 
 
 class _UnavailableSupabaseResult:
-    def __init__(self, data=None, count=0):
+    def __init__(self, data=None, count=0, error=None):
         self.data = data or []
         self.count = count
+        self.error = error
 
 
 class _SafeSupabaseTable:
@@ -55,8 +56,10 @@ class _SafeSupabaseTable:
     def execute(self):
         try:
             return self._table.execute()
-        except Exception:
-            return _UnavailableSupabaseResult()
+        except Exception as e:
+            # Preserve underlying failure so callers can handle specific causes
+            # (for example: missing column, RLS denial, connectivity issues).
+            return _UnavailableSupabaseResult(error=str(e))
 
 
 class _UnavailableSupabaseTable:
@@ -311,7 +314,24 @@ class DatabaseOperations:
         db = Database.get_client()
         try:
             result = db.table(table).insert(data).execute()
-            return result.data if result.data else [data]  # Return input data if no response from Supabase
+            if getattr(result, 'error', None):
+                raise RuntimeError(result.error)
+
+            if result.data:
+                return result.data
+
+            # Some Supabase setups can return an empty payload on write failures
+            # due to wrapped client fallbacks. Verify persistence before reporting success.
+            record_id = data.get('id') if isinstance(data, dict) else None
+            if record_id:
+                persisted = DatabaseOperations.select_one(table, {'id': record_id})
+                if persisted:
+                    return [persisted]
+
+            raise RuntimeError(
+                f"Insert did not persist in '{table}'. "
+                "Possible causes: missing column, RLS policy denial, or Supabase connectivity issue."
+            )
         except Exception as e:
             print(f"ERROR: Supabase insert failed: {str(e)}")
             raise
