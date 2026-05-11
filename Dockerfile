@@ -29,5 +29,5 @@ USER appuser
 
 EXPOSE 5000
 
-# Use waitress to run the Flask app (main:app)
-CMD waitress-serve --host=0.0.0.0 --port=${PORT:-5000} main:app
+# Use gunicorn to run the Flask app (main:app)
+CMD ["sh", "-c", "exec gunicorn main:app --bind 0.0.0.0:${PORT:-5000} --workers ${WEB_CONCURRENCY:-3} --threads ${GUNICORN_THREADS:-4}"]

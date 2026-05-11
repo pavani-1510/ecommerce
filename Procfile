@@ -1,1 +1,1 @@
-web: waitress-serve --port=$PORT main:app
+web: gunicorn main:app --bind 0.0.0.0:$PORT --workers 3 --threads 4
